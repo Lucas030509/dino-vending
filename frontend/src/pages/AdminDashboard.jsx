@@ -73,13 +73,18 @@ export default function AdminDashboard({ session }) {
         <div className="admin-dashboard">
             <header className="admin-header">
                 <div className="brand">
-                    <h1>Dino<span>Admin</span></h1>
+                    <h1 onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>Dino<span>Admin</span></h1>
                     <span className="badge-god">GOD MODE</span>
                 </div>
-                <button onClick={handleLogout} className="logout-btn">
-                    <LogOut size={20} />
-                    <span>Salir</span>
-                </button>
+                <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => window.location.href = '/'} className="btn-secondary" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <LayoutGrid size={18} /> Ir a Operación
+                    </button>
+                    <button onClick={handleLogout} className="logout-btn">
+                        <LogOut size={20} />
+                        <span>Salir</span>
+                    </button>
+                </div>
             </header>
 
             <div className="admin-stats">
