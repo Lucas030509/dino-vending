@@ -316,6 +316,10 @@ export default function Dashboard({ isSuperAdmin }) {
           ) : (
             <h1>Dino<span>Platform</span></h1>
           )}
+          {/* DEBUG AREA - DELETE LATER */}
+          <div style={{ fontSize: '10px', color: 'lime', border: '1px solid lime', padding: '2px' }}>
+            Role: {isSuperAdmin ? 'SUPER_ADMIN' : 'NORMAL'}
+          </div>
         </div>
         <div className="header-actions">
           <button onClick={() => setShowSettingsModal(true)} className="nav-btn icon-only">
