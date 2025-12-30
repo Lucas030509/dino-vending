@@ -28,8 +28,16 @@ function App() {
 
   // Global Theme Fetcher
   useEffect(() => {
+    // 1. Try to load from local storage immediately for speed
+    const cachedColor = localStorage.getItem('brand_color')
+    if (cachedColor) {
+      document.documentElement.style.setProperty('--primary-color', cachedColor)
+      document.documentElement.style.setProperty('--primary-glow', cachedColor + '66')
+    }
+
     if (session?.user) {
       const applyTheme = async () => {
+        // Fetch fresh color
         const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single()
         if (profile?.tenant_id) {
           const { data: tenant } = await supabase.from('tenants').select('brand_color').eq('id', profile.tenant_id).single()
@@ -37,6 +45,8 @@ function App() {
             const root = document.documentElement
             root.style.setProperty('--primary-color', tenant.brand_color)
             root.style.setProperty('--primary-glow', tenant.brand_color + '66')
+            // Cache it
+            localStorage.setItem('brand_color', tenant.brand_color)
           }
         }
       }

@@ -53,13 +53,32 @@ export default function Reports() {
         }
     }
 
-    const handleResolve = async (id) => {
-        const { error } = await supabase
-            .from('reports')
-            .update({ status: 'Resolved' })
-            .eq('id', id)
+    const [processingId, setProcessingId] = useState(null)
 
-        if (!error) fetchReports()
+    const handleResolve = async (id) => {
+        if (!window.confirm('¿Confirmas que este problema ha sido resuelto?')) return;
+        setProcessingId(id)
+
+        try {
+            const { error } = await supabase
+                .from('reports')
+                .update({ status: 'Resolved' })
+                .eq('id', id)
+
+            if (error) throw error
+
+            // Optimistic update locally to feel instant
+            setReports(current => current.map(r =>
+                r.id === id ? { ...r, status: 'Resolved' } : r
+            ))
+
+            // Background refresh to be safe
+            fetchReports()
+        } catch (err) {
+            alert('Error al actualizar reporte: ' + err.message)
+        } finally {
+            setProcessingId(null)
+        }
     }
 
     const typeConfig = {
@@ -122,8 +141,9 @@ export default function Reports() {
 
                                     <div className="r-actions">
                                         {report.status !== 'Resolved' ? (
-                                            <button className="resolve-btn" onClick={() => handleResolve(report.id)}>
-                                                <CheckSquare size={16} /> Marcar Resuelto
+                                            <button className="resolve-btn" onClick={() => handleResolve(report.id)} disabled={processingId === report.id}>
+                                                <CheckSquare size={16} />
+                                                {processingId === report.id ? 'Guardando...' : 'Marcar Resuelto'}
                                             </button>
                                         ) : (
                                             <span className="resolved-badge">Resuelto</span>
