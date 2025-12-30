@@ -41,13 +41,29 @@ export default function Dashboard({ isSuperAdmin }) {
 
   const hideToast = () => setToast({ ...toast, show: false })
 
+  // Internal Admin Check
+  const [isAdmin, setIsAdmin] = useState(false)
+
   useEffect(() => {
+    checkAdminStatus()
     fetchMachines()
     fetchMonthlyStats()
     fetchHistoricalData()
     fetchStockAndAgenda()
     fetchPendingReports()
   }, [])
+
+  const checkAdminStatus = async () => {
+    // Check if user is super_admin directly from DB for maximum reliability
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      // Utiliza la función segura que creamos antes
+      const { data, error } = await supabase.rpc('is_super_admin')
+      if (!error && data === true) {
+        setIsAdmin(true)
+      }
+    }
+  }
 
   const fetchPendingReports = async () => {
     const { count, error } = await supabase
@@ -316,12 +332,15 @@ export default function Dashboard({ isSuperAdmin }) {
           ) : (
             <h1>Dino<span>Platform</span></h1>
           )}
-          {/* DEBUG AREA - DELETE LATER */}
-          <div style={{ fontSize: '10px', color: 'lime', border: '1px solid lime', padding: '2px' }}>
-            Role: {isSuperAdmin ? 'SUPER_ADMIN' : 'NORMAL'}
-          </div>
+          {isAdmin && <span className="badge-god-mini">GOD</span>}
         </div>
         <div className="header-actions">
+          {isAdmin && (
+            <button className="nav-btn admin-link" onClick={() => navigate('/admin')} title="Ir al Panel Super Admin">
+              <ShieldCheck size={20} />
+              <span className="hide-mobile">Admin</span>
+            </button>
+          )}
           <button onClick={() => setShowSettingsModal(true)} className="nav-btn icon-only">
             <Settings size={20} />
           </button>
