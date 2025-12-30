@@ -42,24 +42,24 @@ export default function AdminDashboard({ session }) {
         e.preventDefault()
         setCreating(true)
         try {
-            // Note: In a real production app, you would call a Supabase Edge Function here.
-            // For now, we are just creating the Tenant DB entry. 
-            // The Auth User creation requires 'service_role' key, which we shouldn't expose on frontend.
-            // This is a placeholder for the Logic discussed.
-            // Info alert removed
+            // Llamada a la Edge Function segura
+            const { data, error } = await supabase.functions.invoke('create-tenant', {
+                body: {
+                    name: newTenant.name,
+                    email: newTenant.email,
+                    password: newTenant.password
+                }
+            })
 
-            const { data: tenantData, error: tenantError } = await supabase
-                .from('tenants')
-                .insert({ name: newTenant.name })
-                .select()
-                .single()
-
-            if (tenantError) throw tenantError
+            if (error) throw error
+            // Mágicamente la función puede devolver error en data si no falla HTTP pero sí lógica
+            if (data && data.error) throw new Error(data.data || data.error)
 
             // Success
             setNewTenant({ name: '', email: '', password: '' })
             setShowModal(false)
             fetchTenants()
+            alert('¡Cliente creado exitosamente! Se ha enviado el correo y vinculado la cuenta.')
         } catch (err) {
             console.error(err)
             setErrorMsg('Error al crear: ' + (err.message || 'Error desconocido'))
