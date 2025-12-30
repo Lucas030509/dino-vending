@@ -640,9 +640,16 @@ export default function Dashboard({ isSuperAdmin }) {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 32px;
+          gap: 24px; /* Default gap for smaller screens before wrap */
         }
         
-        .brand h1 { font-size: 1.5rem; margin: 0; }
+        .brand { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            flex-shrink: 0; /* Prevent title from squashing */
+        }
+        .brand h1 { font-size: 1.5rem; margin: 0; white-space: nowrap; }
         .brand span { color: var(--primary-color); }
         .brand-logo { height: 40px; object-fit: contain; }
         
