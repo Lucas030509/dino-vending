@@ -493,8 +493,8 @@ export default function Collections() {
         
         .action-btn { background: var(--primary-color); color: black; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; }
         .action-btn-icon { 
-            background: #84cc16; /* Lime green similar to image */
-            color: white; 
+            background: var(--primary-color);
+            color: black; 
             border: none; 
             width: 40px; height: 40px; 
             border-radius: 50%; 
@@ -527,6 +527,14 @@ export default function Collections() {
         .amount.profit { color: var(--primary-color); }
         .amount.commission { color: #f87171; }
         .empty-cell { text-align: center; color: var(--text-dim); padding: 40px; }
+
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; padding: 20px;
+        }
 
         /* Modal Specifics */
 

@@ -620,6 +620,17 @@ export default function Dashboard() {
         
         .header-actions { display: flex; gap: 12px; }
 
+        @media (max-width: 768px) {
+            .dash-header { gap: 16px; } /* Space between logo and buttons */
+            .header-actions { 
+                overflow-x: auto; 
+                padding-bottom: 5px; /* Space for scrollbar */
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
+            }
+            .nav-btn span.hide-mobile { display: none; }
+        }
+
         .nav-btn, .logout-btn {
           background: transparent;
           border: 1px solid var(--border-color);

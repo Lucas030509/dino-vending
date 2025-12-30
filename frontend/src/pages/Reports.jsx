@@ -96,8 +96,8 @@ export default function Reports() {
                             const config = typeConfig[report.report_type] || { color: '#888', icon: <Info /> }
 
                             return (
-                                <div key={report.id} className={`report-card glass ${report.status === 'Resolved' ? 'resolved' : ''}`}>
-                                    <div className="report-status-stripe" style={{ background: report.status === 'Resolved' ? '#10b981' : config.color }}></div>
+                                <div key={report.id} className={`report-card glass ${report.status === 'Resolved' ? 'resolved' : ''}`} style={{ borderLeftColor: report.status === 'Resolved' ? '#10b981' : config.color }}>
+                                    <div className="report-status-stripe mobile-hide" style={{ background: report.status === 'Resolved' ? '#10b981' : config.color }}></div>
                                     <div className="report-content">
                                         <div className="r-header">
                                             <span className="r-type" style={{ color: config.color }}>
@@ -157,8 +157,15 @@ export default function Reports() {
                 .report-card { 
                     position: relative; margin-bottom: 16px; border-radius: 12px; overflow: hidden; 
                     display: flex; justify-content: space-between; align-items: center;
-                    background: rgba(22, 27, 34, 0.6); border: 1px solid rgba(255,255,255,0.08);
+                     background: rgba(22, 27, 34, 0.6); border: 1px solid rgba(255,255,255,0.08);
                     transition: 0.2s;
+                }
+                @media (max-width: 600px) {
+                    .report-card { flex-direction: column; align-items: stretch; }
+                    .r-actions { border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; }
+                    .report-status-stripe { height: 100%; width: 6px; order: -1; }
+                    .report-card { border-left: 6px solid transparent; } /* Fallback layout fix */
+                    .report-status-stripe { display: none; } /* Hide stripe on mobile col layout, use border-left instead */
                 }
                 .report-card.resolved { opacity: 0.6; filter: grayscale(0.5); }
                 
