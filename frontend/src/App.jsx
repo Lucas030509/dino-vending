@@ -85,7 +85,7 @@ function App() {
             <Route path="/admin" element={session && userRole === 'super_admin' ? <AdminDashboard session={session} /> : <Navigate to="/" />} />
 
             {/* Standard Routes */}
-            <Route path="/" element={session ? <Dashboard /> : <Navigate to="/auth" />} />
+            <Route path="/" element={session ? <Dashboard isSuperAdmin={userRole === 'super_admin'} /> : <Navigate to="/auth" />} />
             <Route path="/machines" element={session ? <Machines /> : <Navigate to="/auth" />} />
             <Route path="/routes" element={session ? <RoutePlanner /> : <Navigate to="/auth" />} />
             <Route path="/collections" element={session ? <Collections /> : <Navigate to="/auth" />} />

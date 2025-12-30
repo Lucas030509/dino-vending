@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText } from 'lucide-react'
+import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText, ShieldCheck } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 
-export default function Dashboard() {
+export default function Dashboard({ isSuperAdmin }) {
   const navigate = useNavigate()
   const [machines, setMachines] = useState([])
   const [activeMachines, setActiveMachines] = useState(0)
@@ -618,6 +618,13 @@ export default function Dashboard() {
         .brand span { color: var(--primary-color); }
         .brand-logo { height: 40px; object-fit: contain; }
         
+        .badge-god-mini {
+            background: linear-gradient(45deg, #f59e0b, #ef4444); 
+            padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; 
+            font-weight: bold; color: white; vertical-align: middle;
+            margin-left: 4px;
+        }
+
         .header-actions { display: flex; gap: 12px; }
 
         @media (max-width: 768px) {
