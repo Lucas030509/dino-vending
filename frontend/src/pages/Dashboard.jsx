@@ -54,13 +54,19 @@ export default function Dashboard({ isSuperAdmin }) {
   }, [])
 
   const checkAdminStatus = async () => {
-    // Check if user is super_admin directly from DB for maximum reliability
+    console.log("🔍 Checking Admin Status...")
     const { data: { user } } = await supabase.auth.getUser()
+    console.log("👤 User:", user ? user.id : 'No User')
+
     if (user) {
-      // Utiliza la función segura que creamos antes
       const { data, error } = await supabase.rpc('is_super_admin')
+      console.log("👮‍♂️ RPC Result:", data, "Error:", error)
+
       if (!error && data === true) {
+        console.log("✅ Setting Admin to TRUE")
         setIsAdmin(true)
+      } else {
+        console.log("❌ Not Admin or Error")
       }
     }
   }
