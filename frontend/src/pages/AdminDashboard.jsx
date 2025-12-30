@@ -14,6 +14,7 @@ export default function AdminDashboard({ session }) {
         password: ''
     })
     const [creating, setCreating] = useState(false)
+    const [errorMsg, setErrorMsg] = useState('')
 
     useEffect(() => {
         fetchTenants()
@@ -45,7 +46,7 @@ export default function AdminDashboard({ session }) {
             // For now, we are just creating the Tenant DB entry. 
             // The Auth User creation requires 'service_role' key, which we shouldn't expose on frontend.
             // This is a placeholder for the Logic discussed.
-            alert("Para crear usuario Auth y vincularlo, necesitamos configurar Edge Functions. Por ahora solo crearemos el registro en Base de Datos de la empresa.")
+            // Info alert removed
 
             const { data: tenantData, error: tenantError } = await supabase
                 .from('tenants')
@@ -55,11 +56,13 @@ export default function AdminDashboard({ session }) {
 
             if (tenantError) throw tenantError
 
-            alert(`Empresa '${tenantData.name}' creada! ID: ${tenantData.id}. \n\nAhora debes crear manualmente el usuario en Auth y vincular su profile a este ID.`)
+            // Success
+            setNewTenant({ name: '', email: '', password: '' })
             setShowModal(false)
             fetchTenants()
         } catch (err) {
-            alert('Error: ' + err.message)
+            console.error(err)
+            setErrorMsg('Error al crear: ' + (err.message || 'Error desconocido'))
         } finally {
             setCreating(false)
         }
@@ -158,6 +161,14 @@ export default function AdminDashboard({ session }) {
                 <div className="modal-overlay">
                     <div className="glass modal-content">
                         <h3>Registrar Nuevo Cliente</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '15px' }}>
+                            Nota: Esto crea el registro de la empresa. El usuario Auth debes crearlo aparte.
+                        </p>
+                        {errorMsg && (
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '0.9rem' }}>
+                                {errorMsg}
+                            </div>
+                        )}
                         <form onSubmit={handleCreateTenant}>
                             <div className="input-group">
                                 <label>Nombre del Negocio</label>
