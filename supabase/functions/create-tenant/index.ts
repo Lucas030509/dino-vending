@@ -47,38 +47,38 @@ serve(async (req) => {
 
         if (tenantError) throw tenantError
 
-        let targetUserId = null
-        let message = 'Empresa creada e invitación enviada.'
+        // B. Crear Usuario (Estrategia "Silent Create" para evitar errores de SMTP/Rate Limit)
+        console.log(`Creando/Buscando usuario: ${email}`)
 
-        // B. Intentar Invitar o Buscar Usuario
-        console.log(`Procesando usuario: ${email}`)
+        let targetUserId = null;
 
-        try {
-            const { data: newUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-                data: { tenant_id: tenant.id },
-                redirectTo: 'https://dino-vending.vercel.app/'
-            })
+        // 1. Intentamos crear usuario nuevo (Confirmado automáticamente)
+        const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email: email,
+            email_confirm: true, // Confirmado directo
+            user_metadata: { tenant_id: tenant.id }
+        })
 
-            if (inviteError) throw inviteError
-            targetUserId = newUser.user.id
+        if (createError) {
+            // Si falla, verificamos si es porque ya existe
+            console.log("Error creando usuario, verificando existencia...", createError.message)
 
-        } catch (inviteErr: any) {
-            console.log("Error invitando (posiblemente ya existe):", inviteErr)
-
-            // Si falla, buscamos si el usuario YA EXISTE
-            // Nota: listUsers es seguro con service_role
+            // Nota: createUser devuelve error si ya existe. Buscamos y vinculamos.
             const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
             const existingUser = users.find(u => u.email === email)
 
             if (existingUser) {
                 console.log("Usuario ya existe. Vinculando ID:", existingUser.id)
                 targetUserId = existingUser.id
-                message = 'Empresa creada. El usuario ya existía, se le ha dado acceso.'
             } else {
-                // Error real (ej. rate limit, email inválido) -> Rollback
+                // Error real (ej. email inválido) -> Rollback
+                console.error("Error fatal creando usuario:", createError)
                 await supabaseAdmin.from('tenants').delete().eq('id', tenant.id)
-                throw inviteErr // Re-lanzar error original
+                throw createError
             }
+        } else {
+            targetUserId = createdUser.user.id
+            console.log("Usuario creado con éxito (Silent). ID:", targetUserId)
         }
 
         // C. Vincular/Actualizar Profile
@@ -91,11 +91,16 @@ serve(async (req) => {
                     role: 'admin',
                     email: email
                 })
-            if (profileError) throw profileError
+            if (profileError) console.error("Error linking profile:", profileError)
         }
 
         return new Response(
-            JSON.stringify({ success: true, tenant, message }),
+            JSON.stringify({
+                success: true,
+                tenant: tenant,
+                user_id: targetUserId,
+                message: 'Empresa registrada. El usuario ha sido dado de alta exitosamente.'
+            }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 

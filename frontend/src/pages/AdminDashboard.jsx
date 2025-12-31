@@ -57,10 +57,13 @@ export default function AdminDashboard({ session }) {
             setNewTenant({ name: '', email: '' })
             setShowModal(false)
             fetchTenants()
-            alert('¡Invitación Enviada! El cliente recibirá un correo para configurar su contraseña.')
+            alert('¡Empresa creada! El usuario ha sido registrado (sin contraseña). Pídale que use la opción "Olvidé mi contraseña" para entrar.')
         } catch (err) {
-            console.error(err)
-            setErrorMsg('Error al crear: ' + (err.message || 'Error desconocido'))
+            console.error('Full Error Object:', err)
+            // Intentamos mostrar detalles si vienen en el body de la respuesta (que a veces queda en data o en properties del error)
+            const details = err.context ? JSON.stringify(err.context) : err.message
+            alert(`Error técnico: ${details}. \nRevisa la consola para más detalles.`)
+            setErrorMsg('Fallo al crear: ' + details)
         } finally {
             setCreating(false)
         }
