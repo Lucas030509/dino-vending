@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { LogOut, LayoutGrid, Users, Plus, ShieldOff, ShieldCheck, DollarSign } from 'lucide-react'
+import { LogOut, LayoutGrid, Users, Plus, ShieldOff, ShieldCheck, DollarSign, Key } from 'lucide-react'
 
 export default function AdminDashboard({ session }) {
     const [tenants, setTenants] = useState([])
@@ -10,10 +10,16 @@ export default function AdminDashboard({ session }) {
     // New Tenant Form State
     const [newTenant, setNewTenant] = useState({
         name: '',
-        email: ''
+        email: '',
+        password: ''
     })
     const [creating, setCreating] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
+
+    // Reset Password State
+    const [resetModal, setResetModal] = useState(false)
+    const [resetPassword, setResetPassword] = useState('')
+    const [targetTenantReset, setTargetTenantReset] = useState(null)
 
     useEffect(() => {
         fetchTenants()
@@ -40,32 +46,66 @@ export default function AdminDashboard({ session }) {
     const handleCreateTenant = async (e) => {
         e.preventDefault()
         setCreating(true)
+        setErrorMsg('')
+
         try {
-            // Llamada a la Edge Function segura
+            // Llamada a la Edge Function segura (MANUAL mode w/ Password)
             const { data, error } = await supabase.functions.invoke('create-tenant', {
                 body: {
                     name: newTenant.name,
-                    email: newTenant.email
+                    email: newTenant.email,
+                    password: newTenant.password
                 }
             })
 
             if (error) throw error
-            // Mágicamente la función puede devolver error en data si no falla HTTP pero sí lógica
             if (data && data.error) throw new Error(data.data || data.error)
 
             // Success
-            setNewTenant({ name: '', email: '' })
+            setNewTenant({ name: '', email: '', password: '' })
             setShowModal(false)
             fetchTenants()
-            alert('¡Empresa creada! El usuario ha sido registrado (sin contraseña). Pídale que use la opción "Olvidé mi contraseña" para entrar.')
+            alert(`¡Cliente Creado!\n\nEntrega estas credenciales al usuario:\nUsuario: ${newTenant.email}\nContraseña: ${newTenant.password}`)
         } catch (err) {
             console.error('Full Error Object:', err)
-            // Intentamos mostrar detalles si vienen en el body de la respuesta (que a veces queda en data o en properties del error)
             const details = err.context ? JSON.stringify(err.context) : err.message
-            alert(`Error técnico: ${details}. \nRevisa la consola para más detalles.`)
+            alert(`Error técnico: ${details}. \nRevisa la consola.`)
             setErrorMsg('Fallo al crear: ' + details)
         } finally {
             setCreating(false)
+        }
+    }
+
+    const openResetModal = (id, name) => {
+        setTargetTenantReset({ id, name })
+        setResetPassword('')
+        setResetModal(true)
+    }
+
+    const handleConfirmReset = async (e) => {
+        e.preventDefault()
+        if (!targetTenantReset || !resetPassword) return
+
+        setLoading(true)
+        try {
+            const { data, error } = await supabase.functions.invoke('reset-password', {
+                body: {
+                    target_tenant_id: targetTenantReset.id,
+                    new_password: resetPassword
+                }
+            })
+
+            if (error) throw error
+            if (data && data.error) throw new Error(data.error)
+
+            alert(`¡Contraseña actualizada exitosamente para ${targetTenantReset.name}!`)
+            setResetModal(false)
+            setTargetTenantReset(null)
+        } catch (err) {
+            console.error(err)
+            alert('Error al resetear: ' + err.message)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -177,6 +217,13 @@ export default function AdminDashboard({ session }) {
                                     <td>
                                         <button
                                             className="action-btn text-only"
+                                            onClick={() => openResetModal(t.id, t.name)}
+                                            style={{ color: '#fbbf24', marginRight: '8px' }}
+                                        >
+                                            <Key size={16} /> Reset
+                                        </button>
+                                        <button
+                                            className="action-btn text-only"
                                             onClick={() => handleDeleteTenant(t.id, t.name)}
                                             style={{ color: '#ef4444' }}
                                         >
@@ -263,6 +310,38 @@ export default function AdminDashboard({ session }) {
                                 {loading ? 'Eliminando...' : 'Sí, Eliminar Definitivamente'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Password Modal */}
+            {resetModal && targetTenantReset && (
+                <div className="modal-overlay">
+                    <div className="glass modal-content">
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24' }}>
+                            <Key /> Resetear Contraseña
+                        </h3>
+                        <p>Estás cambiando la contraseña para el admin de <strong>{targetTenantReset.name}</strong>.</p>
+
+                        <form onSubmit={handleConfirmReset}>
+                            <div className="input-group">
+                                <label>Nueva Contraseña</label>
+                                <input
+                                    type="text"
+                                    value={resetPassword}
+                                    onChange={e => setResetPassword(e.target.value)}
+                                    required
+                                    className="admin-input"
+                                    placeholder="Nueva contraseña..."
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" onClick={() => setResetModal(false)} className="btn-secondary">Cancelar</button>
+                                <button type="submit" className="btn-primary" style={{ background: '#fbbf24', color: 'black' }} disabled={loading}>
+                                    {loading ? 'Guardando...' : 'Guardar Nueva Contraseña'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

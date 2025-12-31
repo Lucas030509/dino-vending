@@ -36,7 +36,9 @@ serve(async (req) => {
             Deno.env.get('MY_SERVICE_ROLE_KEY') ?? ''
         )
 
-        const { name, email } = await req.json()
+        const { name, email, password } = await req.json()
+
+        if (!password) throw new Error('La contraseña es obligatoria en modo manual')
 
         // A. Crear Tenant
         const { data: tenant, error: tenantError } = await supabaseAdmin
@@ -47,15 +49,15 @@ serve(async (req) => {
 
         if (tenantError) throw tenantError
 
-        // B. Crear Usuario (Estrategia "Silent Create" para evitar errores de SMTP/Rate Limit)
-        console.log(`Creando/Buscando usuario: ${email}`)
+        let targetUserId = null
 
-        let targetUserId = null;
+        // B. Crear Usuario con Password Manual
+        console.log(`Creando usuario manual: ${email}`)
 
-        // 1. Intentamos crear usuario nuevo (Confirmado automáticamente)
         const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: email,
-            email_confirm: true, // Confirmado directo
+            password: password,
+            email_confirm: true,
             user_metadata: { tenant_id: tenant.id }
         })
 
@@ -63,22 +65,23 @@ serve(async (req) => {
             // Si falla, verificamos si es porque ya existe
             console.log("Error creando usuario, verificando existencia...", createError.message)
 
-            // Nota: createUser devuelve error si ya existe. Buscamos y vinculamos.
             const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
             const existingUser = users.find(u => u.email === email)
 
             if (existingUser) {
                 console.log("Usuario ya existe. Vinculando ID:", existingUser.id)
                 targetUserId = existingUser.id
+                // Opcional: ¿Actualizamos el password del usuario existente?
+                // El usuario dijo "resetear" como acción separada. Aquí solo vinculamos.
+                // Si quisiera forzar update: await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: password })
             } else {
-                // Error real (ej. email inválido) -> Rollback
                 console.error("Error fatal creando usuario:", createError)
                 await supabaseAdmin.from('tenants').delete().eq('id', tenant.id)
                 throw createError
             }
         } else {
             targetUserId = createdUser.user.id
-            console.log("Usuario creado con éxito (Silent). ID:", targetUserId)
+            console.log("Usuario creado con éxito. ID:", targetUserId)
         }
 
         // C. Vincular/Actualizar Profile
@@ -99,7 +102,7 @@ serve(async (req) => {
                 success: true,
                 tenant: tenant,
                 user_id: targetUserId,
-                message: 'Empresa registrada. El usuario ha sido dado de alta exitosamente.'
+                message: 'Cliente creado exitosamente. Entrega las credenciales al usuario.'
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
