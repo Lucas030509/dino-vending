@@ -15,8 +15,7 @@ serve(async (req) => {
     }
 
     try {
-        // 1. Verificar que quien llama es Super Admin (Seguridad ante todo)
-        // Obtenemos el cliente con el contexto del usuario actual
+        // 1. Verificar que quien llama es Super Admin (Seguridad)
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -26,7 +25,7 @@ serve(async (req) => {
         const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
         if (userError || !user) throw new Error('No autorizado')
 
-        // Consultamos la tabla profiles para ver si es super_admin
+        // Consultamos roles
         const { data: profile } = await supabaseClient
             .from('profiles')
             .select('role')
@@ -41,16 +40,16 @@ serve(async (req) => {
         }
 
         // ---------------------------------------------------------
-        // 2. INICIA LA MAGIA (Usando Service Role Key)
+        // 2. INICIA LA MAGIA (Usando Service Role Key PROPIO)
         // ---------------------------------------------------------
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('MY_SERVICE_ROLE_KEY') ?? ''
         )
 
-        const { name, email, password } = await req.json()
+        const { name, email } = await req.json() // YA NO EXIGIMOS PASSWORD
 
-        // A. Crear Emrpesa (Tenant)
+        // A. Crear Empresa (Tenant)
         const { data: tenant, error: tenantError } = await supabaseAdmin
             .from('tenants')
             .insert({ name: name })
@@ -59,32 +58,28 @@ serve(async (req) => {
 
         if (tenantError) throw tenantError
 
-        // B. Crear Usuario Auth
-        const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: email,
-            password: password,
-            email_confirm: true, // Confirmamos auto para que pueda entrar ya
-            user_metadata: { tenant_id: tenant.id } // Guardamos referencia en metadata también
+        // B. INVITAR Usuario Auth (ENVÍA EMAIL AUTOMÁTICO)
+        // Supabase permite configurar la plantilla en el dashboard.
+        const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+            data: { tenant_id: tenant.id }, // Se guarda en user_metadata
+            redirectTo: 'https://dino-vending.vercel.app/' // Redirige al login/home tras poner pass
         })
 
         if (authError) {
-            // Rollback: Si falla el usuario, borramos la empresa para no dejar basura
+            // Rollback: Si falla invitación, borrar empresa
             await supabaseAdmin.from('tenants').delete().eq('id', tenant.id)
             throw authError
         }
 
-        // C. Vincular Profile (Actualizar el profile que se crea automáticamente por trigger, O crearlo si no existe)
-        // Nota: Si tienes un Trigger "on auth.users insert -> create profile", solo actualizamos.
-        // Si no, lo insertamos. Haremos un upsert seguro.
-
-        // Esperamos un poco (100ms) por si el trigger es asíncrono, aunque upsert maneja esto.
+        // C. Vincular Profile
         if (newUser.user) {
+            // Upsert para garantizar el link
             const { error: profileError } = await supabaseAdmin
                 .from('profiles')
                 .upsert({
                     id: newUser.user.id,
                     tenant_id: tenant.id,
-                    role: 'admin', // El primer usuario de una empresa es Admin
+                    role: 'admin',
                     email: email
                 })
 
@@ -96,7 +91,7 @@ serve(async (req) => {
                 success: true,
                 tenant: tenant,
                 user_id: newUser.user?.id,
-                message: 'Empresa y Usuario creados exitosamente'
+                message: 'Empresa creada e invitación enviada exitosamente'
             }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },

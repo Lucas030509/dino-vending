@@ -10,8 +10,7 @@ export default function AdminDashboard({ session }) {
     // New Tenant Form State
     const [newTenant, setNewTenant] = useState({
         name: '',
-        email: '',
-        password: ''
+        email: ''
     })
     const [creating, setCreating] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
@@ -46,8 +45,7 @@ export default function AdminDashboard({ session }) {
             const { data, error } = await supabase.functions.invoke('create-tenant', {
                 body: {
                     name: newTenant.name,
-                    email: newTenant.email,
-                    password: newTenant.password
+                    email: newTenant.email
                 }
             })
 
@@ -56,10 +54,10 @@ export default function AdminDashboard({ session }) {
             if (data && data.error) throw new Error(data.data || data.error)
 
             // Success
-            setNewTenant({ name: '', email: '', password: '' })
+            setNewTenant({ name: '', email: '' })
             setShowModal(false)
             fetchTenants()
-            alert('¡Cliente creado exitosamente! Se ha enviado el correo y vinculado la cuenta.')
+            alert('¡Invitación Enviada! El cliente recibirá un correo para configurar su contraseña.')
         } catch (err) {
             console.error(err)
             setErrorMsg('Error al crear: ' + (err.message || 'Error desconocido'))
