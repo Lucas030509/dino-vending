@@ -66,6 +66,24 @@ export default function AdminDashboard({ session }) {
         }
     }
 
+    const handleDeleteTenant = async (id, name) => {
+        if (!window.confirm(`¿Estás SEGURO de eliminar la empresa "${name}"?\nEsta acción es irreversible y borrará todos sus datos.`)) return
+
+        setLoading(true)
+        try {
+            const { error } = await supabase.from('tenants').delete().eq('id', id)
+            if (error) throw error
+
+            alert('Empresa eliminada correctamente.')
+            fetchTenants()
+        } catch (err) {
+            console.error(err)
+            alert('Error al eliminar: ' + err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleLogout = async () => {
         await supabase.auth.signOut()
     }
@@ -143,8 +161,12 @@ export default function AdminDashboard({ session }) {
                                         <span className="status-badge active">Activo</span>
                                     </td>
                                     <td>
-                                        <button className="action-btn text-only">
-                                            <ShieldOff size={16} /> Suspender
+                                        <button
+                                            className="action-btn text-only"
+                                            onClick={() => handleDeleteTenant(t.id, t.name)}
+                                            style={{ color: '#ef4444' }}
+                                        >
+                                            <ShieldOff size={16} /> Eliminar
                                         </button>
                                     </td>
                                 </tr>
