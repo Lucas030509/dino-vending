@@ -271,6 +271,17 @@ export default function AdminDashboard({ session }) {
                                     className="admin-input"
                                 />
                             </div>
+                            <div className="input-group">
+                                <label>Contraseña Inicial</label>
+                                <input
+                                    type="text"
+                                    value={newTenant.password}
+                                    onChange={e => setNewTenant({ ...newTenant, password: e.target.value })}
+                                    required
+                                    placeholder="Contraseña segura"
+                                    className="admin-input"
+                                />
+                            </div>
                             <div className="modal-actions">
                                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
                                 <button type="submit" className="btn-primary purple" disabled={creating}>
