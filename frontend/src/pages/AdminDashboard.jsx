@@ -69,15 +69,26 @@ export default function AdminDashboard({ session }) {
         }
     }
 
-    const handleDeleteTenant = async (id, name) => {
-        if (!window.confirm(`¿Estás SEGURO de eliminar la empresa "${name}"?\nEsta acción es irreversible y borrará todos sus datos.`)) return
+    // Delete State
+    const [deleteModal, setDeleteModal] = useState(false)
+    const [targetTenant, setTargetTenant] = useState(null)
+
+    const handleDeleteTenant = (id, name) => {
+        setTargetTenant({ id, name })
+        setDeleteModal(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!targetTenant) return
 
         setLoading(true)
         try {
-            const { error } = await supabase.from('tenants').delete().eq('id', id)
+            const { error } = await supabase.from('tenants').delete().eq('id', targetTenant.id)
             if (error) throw error
 
             alert('Empresa eliminada correctamente.')
+            setDeleteModal(false)
+            setTargetTenant(null)
             fetchTenants()
         } catch (err) {
             console.error(err)
@@ -220,6 +231,38 @@ export default function AdminDashboard({ session }) {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal && targetTenant && (
+                <div className="modal-overlay">
+                    <div className="glass modal-content" style={{ borderColor: '#ef4444' }}>
+                        <h3 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ShieldOff /> Zona de Peligro
+                        </h3>
+                        <p>¿Estás seguro que deseas eliminar la empresa <strong>{targetTenant.name}</strong>?</p>
+                        <p style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>
+                            Esta acción es <strong>IRREVERSIBLE</strong>. Se perderán el historial, usuarios y configuración de este cliente.
+                        </p>
+
+                        <div className="modal-actions">
+                            <button
+                                onClick={() => { setDeleteModal(false); setTargetTenant(null); }}
+                                className="btn-secondary"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="btn-primary"
+                                style={{ background: '#ef4444', border: 'none', color: 'white' }}
+                                disabled={loading}
+                            >
+                                {loading ? 'Eliminando...' : 'Sí, Eliminar Definitivamente'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
