@@ -209,21 +209,28 @@ export default function Machines() {
                 return
             }
 
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('tenant_id')
-                .eq('id', user.id)
-                .single()
+            // 1. Try fetching from Metadata (Fastest & Safest)
+            let tenantId = user.user_metadata?.tenant_id
 
-            if (!profile?.tenant_id) {
-                showToast("No se encontró Tenant", 'error')
+            // 2. Fallback to Profiles if not in metadata
+            if (!tenantId) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('tenant_id')
+                    .eq('id', user.id)
+                    .single()
+                tenantId = profile?.tenant_id
+            }
+
+            if (!tenantId) {
+                showToast("No se encontró Tenant (Empresa) asociada.", 'error')
                 return
             }
 
             // Prepare data
             const machineData = {
                 ...newMachine,
-                tenant_id: profile.tenant_id
+                tenant_id: tenantId
             }
 
             let error
@@ -320,8 +327,20 @@ export default function Machines() {
                 const { data: { user } } = await supabase.auth.getUser()
                 if (!user) return;
 
-                const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-                if (!profile?.tenant_id) {
+                // 1. Try fetching from Metadata (Fastest & Safest)
+                let tenantId = user.user_metadata?.tenant_id
+
+                // 2. Fallback to Profiles if not in metadata
+                if (!tenantId) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('tenant_id')
+                        .eq('id', user.id)
+                        .single()
+                    tenantId = profile?.tenant_id
+                }
+
+                if (!tenantId) {
                     showToast("Error de sesión: No se encontró el tenant.", 'error');
                     return;
                 }
@@ -330,7 +349,7 @@ export default function Machines() {
                 const { data: existingMachines } = await supabase
                     .from('machines')
                     .select('id, qr_code_uid')
-                    .eq('tenant_id', profile.tenant_id);
+                    .eq('tenant_id', tenantId);
 
                 const uidMap = new Map();
                 if (existingMachines) {
@@ -362,7 +381,7 @@ export default function Machines() {
                         : '';
 
                     const machineObj = {
-                        tenant_id: profile.tenant_id,
+                        tenant_id: tenantId,
                         qr_code_uid: uid,
                         location_name: findValue(row, ['nombre', 'ubicacion', 'lugar', 'cliente']) || 'Sin Nombre',
                         address: addressText,

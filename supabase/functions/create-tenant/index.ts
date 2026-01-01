@@ -69,11 +69,16 @@ serve(async (req) => {
             const existingUser = users.find(u => u.email === email)
 
             if (existingUser) {
-                console.log("Usuario ya existe. Vinculando ID:", existingUser.id)
+                console.log("Usuario ya existe. Vinculando y ACTUALIZANDO PASSWORD para ID:", existingUser.id)
                 targetUserId = existingUser.id
-                // Opcional: ¿Actualizamos el password del usuario existente?
-                // El usuario dijo "resetear" como acción separada. Aquí solo vinculamos.
-                // Si quisiera forzar update: await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: password })
+
+                // IMPORTANTE: Forzamos la actualización de contraseña para que coincida con lo que el Admin escribió
+                const { error: updatePassError } = await supabaseAdmin.auth.admin.updateUserById(
+                    existingUser.id,
+                    { password: password }
+                )
+                if (updatePassError) console.error("Error actualizando password de usuario existente:", updatePassError)
+
             } else {
                 console.error("Error fatal creando usuario:", createError)
                 await supabaseAdmin.from('tenants').delete().eq('id', tenant.id)
