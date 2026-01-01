@@ -204,10 +204,10 @@ export default function Machines() {
             contact_name: machine.contact_name || '',
             contact_email: machine.contact_email || '',
             contact_phone: machine.contact_phone || '',
-            // V3 Params
+            // V3 Params (Corrected Mapping)
             closed_days: machine.closed_days || [],
-            open_time: machine.open_time || '',
-            close_time: machine.close_time || '',
+            opening_time: machine.opening_time || '',
+            closing_time: machine.closing_time || '',
             contract_type: machine.contract_type || 'commission',
             rent_periodicity: machine.rent_periodicity || 'Mensual',
             rent_amount: machine.rent_amount || ''
@@ -215,8 +215,11 @@ export default function Machines() {
         setSearchQuery(machine.address || '')
         setEditingId(machine.id)
         setIsEditing(true)
+        setIsSubmitting(false) // Reset safety
         setShowModal(true)
     }
+
+
 
     const handleAddMachine = async (e) => {
         e.preventDefault()
@@ -844,6 +847,7 @@ export default function Machines() {
                                     type="submit"
                                     className="btn-primary"
                                     disabled={isSubmitting}
+                                    style={{ opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'wait' : 'pointer' }}
                                 >
                                     {isSubmitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Registrar')}
                                 </button>
