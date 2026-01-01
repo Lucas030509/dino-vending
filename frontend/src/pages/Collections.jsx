@@ -109,8 +109,26 @@ export default function Collections() {
         }
     }
 
+    // Helper: Smart Date Calculation (Skip Closed Days)
+    const calculateSmartNextDate = (startDateStr, daysToAdd, closedDays = []) => {
+        let date = new Date(startDateStr)
+        date.setDate(date.getDate() + parseInt(daysToAdd))
+
+        // Safety Break (max 14 iterations to prevent infinite loop if all days closed)
+        let loops = 0
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+        while (closedDays.includes(dayNames[date.getDay()]) && loops < 14) {
+            date.setDate(date.getDate() + 1) // Add 1 more day
+            loops++
+        }
+        return date.toISOString().split('T')[0]
+    }
+
     const handleOpenModal = (machine) => {
         setSelectedMachine(machine)
+        const isRent = machine.contract_type === 'rent'
+
         setNewCollection({
             ...newCollection,
             gross_amount: '',
@@ -118,7 +136,8 @@ export default function Collections() {
             units_sold: 0,
             cost_capsule: 1,
             cost_product: 2.5,
-            commission_percent: machine.commission_percent || 0
+            commission_percent: isRent ? 0 : (machine.commission_percent || 0),
+            rent_amount_snapshot: isRent ? (machine.rent_amount || 0) : 0
         })
         setPhotoBlob(null)
         setPhotoPreview(null)
@@ -169,10 +188,12 @@ export default function Collections() {
 
             const profit = gross - commission - totalExp
 
-            // Calculate next refill date
-            const nextDate = new Date()
-            nextDate.setDate(nextDate.getDate() + parseInt(newCollection.next_refill_days))
-            const nextVisitDateStr = nextDate.toISOString().split('T')[0]
+            // Smart Next Date Calculation
+            const nextVisitDateStr = calculateSmartNextDate(
+                newCollection.collection_date,
+                newCollection.next_refill_days,
+                selectedMachine.closed_days || []
+            )
 
             const { data: { user } } = await supabase.auth.getUser()
 
@@ -297,7 +318,10 @@ export default function Collections() {
                             <div key={machine.id} className="machine-item glass-hover">
                                 <div className="m-info">
                                     <h4>{machine.location_name}</h4>
-                                    <p className="sub-text">{machine.qr_code_uid} • {machine.commission_percent}% Com.</p>
+                                    <p className="sub-text">
+                                        {machine.qr_code_uid} •
+                                        {machine.contract_type === 'rent' ? ' Renta Fija' : ` ${machine.commission_percent}% Com.`}
+                                    </p>
                                 </div>
                                 <button
                                     className="action-btn-icon"
@@ -399,21 +423,34 @@ export default function Collections() {
                                         />
                                     </div>
 
-                                    <div className="input-group">
-                                        <label>Comisión del Lugar (%)</label>
-                                        <div className="commission-control">
-                                            <input
-                                                type="number"
-                                                min="0" max="100" step="0.5"
-                                                value={newCollection.commission_percent}
-                                                onChange={e => setNewCollection({ ...newCollection, commission_percent: parseFloat(e.target.value) })}
-                                                required
-                                            />
-                                            <div className="commission-value">
-                                                = ${commissionAmount.toFixed(2)}
+                                    {selectedMachine.contract_type === 'rent' ? (
+                                        <div className="input-group">
+                                            <label>Esquema de Pago</label>
+                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                                <DollarSign size={14} style={{ display: 'inline', marginRight: 5 }} />
+                                                Modelo de Renta Fija
+                                                <div style={{ color: 'white', marginTop: 4, fontWeight: 'bold' }}>
+                                                    ${selectedMachine.rent_amount} / {selectedMachine.rent_periodicity}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="input-group">
+                                            <label>Comisión del Lugar (%)</label>
+                                            <div className="commission-control">
+                                                <input
+                                                    type="number"
+                                                    min="0" max="100" step="0.5"
+                                                    value={newCollection.commission_percent}
+                                                    onChange={e => setNewCollection({ ...newCollection, commission_percent: parseFloat(e.target.value) })}
+                                                    required
+                                                />
+                                                <div className="commission-value">
+                                                    = ${commissionAmount.toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="form-section-title mt-4">Próxima Visita</div>
                                     <div className="input-group">

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square, User, Mail, Phone } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square, User, Mail, Phone, Clock, DollarSign } from 'lucide-react'
 import { read, utils } from 'xlsx'
 import { QRCodeSVG } from 'qrcode.react'
 import { jsPDF } from 'jspdf'
@@ -29,7 +29,14 @@ export default function Machines() {
         zone: '',
         contact_name: '',
         contact_email: '',
-        contact_phone: ''
+        contact_phone: '',
+        // V3 Props
+        closed_days: [],
+        opening_time: '',
+        closing_time: '',
+        contract_type: 'commission',
+        rent_periodicity: 'Mensual',
+        rent_amount: ''
     })
     const [isEditing, setIsEditing] = useState(false)
     const [editingId, setEditingId] = useState(null)
@@ -196,7 +203,14 @@ export default function Machines() {
             zone: machine.zone || '',
             contact_name: machine.contact_name || '',
             contact_email: machine.contact_email || '',
-            contact_phone: machine.contact_phone || ''
+            contact_phone: machine.contact_phone || '',
+            // V3 Params
+            closed_days: machine.closed_days || [],
+            open_time: machine.open_time || '',
+            close_time: machine.close_time || '',
+            contract_type: machine.contract_type || 'commission',
+            rent_periodicity: machine.rent_periodicity || 'Mensual',
+            rent_amount: machine.rent_amount || ''
         })
         setSearchQuery(machine.address || '')
         setEditingId(machine.id)
@@ -626,95 +640,199 @@ export default function Machines() {
                                         onChange={e => setNewMachine({ ...newMachine, machine_count: parseInt(e.target.value) })}
                                     />
                                 </div>
-                                <div className="input-group">
-                                    <label>Comisión (%)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={newMachine.commission_percent}
-                                        onChange={e => setNewMachine({ ...newMachine, commission_percent: parseFloat(e.target.value) })}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Sección de Contacto */}
-                            <div className="form-section-divider">
-                                <h4 style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '20px 0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <User size={16} /> Datos de Contacto (Para Recibos)
-                                </h4>
-                                <div className="input-group">
-                                    <label>Nombre del Encargado / Dueño</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ej: Juan Pérez"
-                                        value={newMachine.contact_name}
-                                        onChange={e => setNewMachine({ ...newMachine, contact_name: e.target.value })}
-                                        className="contact-input"
-                                    />
-                                </div>
-                                <div className="columns-2">
+                                <div className="form-section-divider">
+                                    <h4 style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '20px 0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Clock size={16} /> Horarios y Disponibilidad
+                                    </h4>
                                     <div className="input-group">
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> Correo (Recibos)</label>
-                                        <input
-                                            type="email"
-                                            placeholder="cliente@email.com"
-                                            value={newMachine.contact_email}
-                                            onChange={e => setNewMachine({ ...newMachine, contact_email: e.target.value })}
-                                        />
+                                        <label>Días Cerrados (No se programarán visitas)</label>
+                                        <div className="days-selector week-days">
+                                            {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'].map((day, idx) => {
+                                                const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                                                const dayVal = fullDays[idx]
+                                                const isClosed = newMachine.closed_days?.includes(dayVal)
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        key={day}
+                                                        className={isClosed ? 'active closed-day' : ''}
+                                                        onClick={() => {
+                                                            const current = newMachine.closed_days || []
+                                                            const updated = current.includes(dayVal)
+                                                                ? current.filter(d => d !== dayVal)
+                                                                : [...current, dayVal]
+                                                            setNewMachine({ ...newMachine, closed_days: updated })
+                                                        }}
+                                                        title={isClosed ? 'Cerrado' : 'Abierto'}
+                                                    >
+                                                        {day}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
+                                            * Selecciona los días que el local NO abre.
+                                        </div>
                                     </div>
-                                    <div className="input-group">
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> Teléfono</label>
-                                        <input
-                                            type="tel"
-                                            placeholder="55 1234 5678"
-                                            value={newMachine.contact_phone}
-                                            onChange={e => setNewMachine({ ...newMachine, contact_phone: e.target.value })}
-                                        />
+                                    <div className="columns-2">
+                                        <div className="input-group">
+                                            <label>Apertura</label>
+                                            <input
+                                                type="time"
+                                                value={newMachine.opening_time || ''}
+                                                onChange={e => setNewMachine({ ...newMachine, opening_time: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Cierre</label>
+                                            <input
+                                                type="time"
+                                                value={newMachine.closing_time || ''}
+                                                onChange={e => setNewMachine({ ...newMachine, closing_time: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="input-group search-container">
-                                <label>Dirección</label>
-                                <div className="search-input-wrapper">
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar..."
-                                        value={searchQuery}
-                                        onChange={e => handleAddressSearch(e.target.value)}
-                                        className="map-input"
-                                        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                    />
-                                    {isSearching ? <Loader2 className="input-icon spin" size={18} /> : <Search className="input-icon" size={18} />}
-                                </div>
+                                <div className="form-section-divider">
+                                    <h4 style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '20px 0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <DollarSign size={16} /> Acuerdo Financiero
+                                    </h4>
 
-                                {showSuggestions && suggestions.length > 0 && (
-                                    <div className="suggestions-dropdown glass">
-                                        {suggestions.map((item, index) => (
-                                            <div
-                                                key={index}
-                                                className="suggestion-item"
-                                                onClick={() => selectSuggestion(item)}
-                                            >
-                                                <MapPin size={14} className="teal" />
-                                                <span>{item.display_name}</span>
+                                    <div className="contract-switch">
+                                        <button
+                                            type="button"
+                                            className={newMachine.contract_type === 'commission' ? 'active' : ''}
+                                            onClick={() => setNewMachine({ ...newMachine, contract_type: 'commission' })}
+                                        >
+                                            Por Comisión (%)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={newMachine.contract_type === 'rent' ? 'active' : ''}
+                                            onClick={() => setNewMachine({ ...newMachine, contract_type: 'rent' })}
+                                        >
+                                            Renta Fija ($)
+                                        </button>
+                                    </div>
+
+                                    {newMachine.contract_type === 'rent' ? (
+                                        <div className="rent-config glass-panel-inner">
+                                            <div className="columns-2">
+                                                <div className="input-group">
+                                                    <label>Monto de Renta (A Pagar)</label>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0.00"
+                                                        value={newMachine.rent_amount}
+                                                        onChange={e => setNewMachine({ ...newMachine, rent_amount: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Periodicidad</label>
+                                                    <select
+                                                        value={newMachine.rent_periodicity}
+                                                        onChange={e => setNewMachine({ ...newMachine, rent_periodicity: e.target.value })}
+                                                        className="select-input"
+                                                    >
+                                                        {['Mensual', 'Bimestral', 'Trimestral', 'Semestral', 'Anual'].map(p => (
+                                                            <option key={p} value={p}>{p}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="input-group">
+                                            <label>Comisión sobre Venta (%)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={newMachine.commission_percent}
+                                                onChange={e => setNewMachine({ ...newMachine, commission_percent: parseFloat(e.target.value) })}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
 
-                            <div className="modal-actions">
-                                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
-                                <button
-                                    type="submit"
-                                    className="btn-primary"
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Registrar')}
-                                </button>
-                            </div>
+                                {/* Sección de Contacto */}
+                                <div className="form-section-divider">
+                                    <h4 style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '20px 0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <User size={16} /> Datos de Contacto (Para Recibos)
+                                    </h4>
+                                    <div className="input-group">
+                                        <label>Nombre del Encargado / Dueño</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: Juan Pérez"
+                                            value={newMachine.contact_name}
+                                            onChange={e => setNewMachine({ ...newMachine, contact_name: e.target.value })}
+                                            className="contact-input"
+                                        />
+                                    </div>
+                                    <div className="columns-2">
+                                        <div className="input-group">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> Correo (Recibos)</label>
+                                            <input
+                                                type="email"
+                                                placeholder="cliente@email.com"
+                                                value={newMachine.contact_email}
+                                                onChange={e => setNewMachine({ ...newMachine, contact_email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="input-group">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> Teléfono</label>
+                                            <input
+                                                type="tel"
+                                                placeholder="55 1234 5678"
+                                                value={newMachine.contact_phone}
+                                                onChange={e => setNewMachine({ ...newMachine, contact_phone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="input-group search-container">
+                                    <label>Dirección</label>
+                                    <div className="search-input-wrapper">
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar..."
+                                            value={searchQuery}
+                                            onChange={e => handleAddressSearch(e.target.value)}
+                                            className="map-input"
+                                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                                        />
+                                        {isSearching ? <Loader2 className="input-icon spin" size={18} /> : <Search className="input-icon" size={18} />}
+                                    </div>
+
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <div className="suggestions-dropdown glass">
+                                            {suggestions.map((item, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="suggestion-item"
+                                                    onClick={() => selectSuggestion(item)}
+                                                >
+                                                    <MapPin size={14} className="teal" />
+                                                    <span>{item.display_name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="modal-actions">
+                                    <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
+                                    <button
+                                        type="submit"
+                                        className="btn-primary"
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Registrar')}
+                                    </button>
+                                </div>
                         </form>
                     </div>
                 </div>
@@ -740,7 +858,38 @@ export default function Machines() {
 
             <style dangerouslySetInnerHTML={{
                 __html: `
-        .machines-page { padding: 20px; max-width: 1200px; margin: 0 auto; color: white; padding-bottom: 80px; }
+        /* V3 New Styles */
+        .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 5px; }
+        .week-days button { 
+             padding: 8px 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); 
+             background: rgba(255,255,255,0.05); color: var(--text-dim); cursor: pointer;
+             font-size: 0.8rem; transition: all 0.2s;
+        }
+        .week-days button:hover { background: rgba(255,255,255,0.1); }
+        .week-days button.active.closed-day {
+            background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444; font-weight: bold;
+        }
+
+        .contract-switch {
+            display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 4px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .contract-switch button {
+            flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-dim); border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .contract-switch button.active {
+            background: var(--primary-color); color: black; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .glass-panel-inner {
+            background: rgba(255,255,255,0.03); border-radius: 8px; padding: 20px; border: 1px dashed rgba(255,255,255,0.1); margin-bottom: 20px;
+        }
+
+        .select-input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3); color: white; font-size: 1rem;
+        }
+        
+        .machines-page { padding: 20px; max-width: 1400px; margin: 0 auto; color: white; padding-bottom: 80px; }
         .page-header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
         .header-left { display: flex; align-items: center; gap: 16px; }
         .back-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: white; transition: all 0.2s; }
