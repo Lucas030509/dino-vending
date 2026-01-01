@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers } from 'lucide-react'
+import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers, Save, List, Plus, Trash2, CheckCircle, Clock } from 'lucide-react'
 
 export default function RoutePlanner() {
+    // --- Existing State ---
     const [machines, setMachines] = useState([])
     const [zones, setZones] = useState([])
     const [loading, setLoading] = useState(true)
     const [filterQuery, setFilterQuery] = useState('')
-
-    // Selection State
     const [selectedIds, setSelectedIds] = useState(new Set())
     const [scheduleDate, setScheduleDate] = useState('')
+
+    // --- New State for Route Management ---
+    const [activeTab, setActiveTab] = useState('new') // 'new' | 'list'
+    const [savedRoutes, setSavedRoutes] = useState([])
+    const [routesLoading, setRoutesLoading] = useState(false)
+    const [viewingRoute, setViewingRoute] = useState(null) // If not null, showing details of a saved route
 
     // Toast
     const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
@@ -27,6 +32,12 @@ export default function RoutePlanner() {
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
         setScheduleDate(now.toISOString().slice(0, 16))
     }, [])
+
+    useEffect(() => {
+        if (activeTab === 'list') {
+            fetchRoutes()
+        }
+    }, [activeTab])
 
     const fetchMachines = async () => {
         try {
@@ -49,11 +60,27 @@ export default function RoutePlanner() {
         }
     }
 
+    const fetchRoutes = async () => {
+        setRoutesLoading(true)
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const { data, error } = await supabase
+                .from('routes')
+                .select('*, route_stops(count)')
+                .eq('tenant_id', user.user_metadata?.tenant_id) // Assumes simplified check for now
+                .order('scheduled_date', { ascending: false })
+
+            if (data) setSavedRoutes(data)
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setRoutesLoading(false)
+        }
+    }
+
     const toggleZone = (zoneName) => {
         const machinesInZone = machines.filter(m => m.zone === zoneName).map(m => m.id)
         const newSet = new Set(selectedIds)
-
-        // If all machines in zone are already selected, deselect them
         const allSelected = machinesInZone.every(id => newSet.has(id))
 
         if (allSelected) {
@@ -80,31 +107,129 @@ export default function RoutePlanner() {
         }
     }
 
-    const handleLaunchRoute = () => {
+    const handleLaunchRoute = (routeMachines = null) => {
+        // If routeMachines is passed (from saved route), use that. Else use selection.
+        let targets = []
+        if (routeMachines) {
+            targets = routeMachines
+        } else {
+            if (selectedIds.size === 0) {
+                showToast("Selecciona al menos una máquina", "error")
+                return
+            }
+            targets = machines.filter(m => selectedIds.has(m.id))
+        }
+
+        const waypoints = targets
+            .map(m => encodeURIComponent(m.address || m.location_name))
+            .join('|')
+
+        const destination = encodeURIComponent(targets[targets.length - 1].address || targets[targets.length - 1].location_name)
+        const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}&waypoints=${waypoints}`
+        window.open(url, '_blank')
+        showToast("Ruta abierta en Google Maps", "success")
+    }
+
+    const handleSaveRoute = async () => {
         if (selectedIds.size === 0) {
             showToast("Selecciona al menos una máquina", "error")
             return
         }
 
-        const selectedMachines = machines.filter(m => selectedIds.has(m.id))
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
 
-        // Construct standard Google Maps multi-stop URL
-        // Origin: Current Selection (or user's location)
-        // Waypoints: All selected machines
+            // Get tenant (simplified logic re-using existing pattern elsewhere usually)
+            // Ideally we store tenant_id in context, but let's grab from metadata or profile
+            let tenantId = user.user_metadata?.tenant_id
 
-        const waypoints = selectedMachines
-            .map(m => encodeURIComponent(m.address || m.location_name))
-            .join('|')
+            const { data: route, error: routeError } = await supabase.from('routes').insert({
+                driver_id: user.id,
+                tenant_id: tenantId,
+                scheduled_date: scheduleDate.split('T')[0],
+                name: `Ruta ${new Date(scheduleDate).toLocaleDateString()}`,
+                status: 'scheduled'
+            }).select().single()
 
-        // Use the last selected machine as the final destination
-        const destination = encodeURIComponent(selectedMachines[selectedMachines.length - 1].address || selectedMachines[selectedMachines.length - 1].location_name)
+            if (routeError) throw routeError
 
-        const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}&waypoints=${waypoints}`
+            const stopsData = machines
+                .filter(m => selectedIds.has(m.id))
+                .map((m, index) => ({
+                    route_id: route.id,
+                    machine_id: m.id,
+                    stop_order: index + 1,
+                    status: 'pending'
+                }))
 
-        // In a real app with Google Auth, we could insert this into Google Calendar here
+            const { error: stopsError } = await supabase.from('route_stops').insert(stopsData)
+            if (stopsError) throw stopsError
 
-        window.open(url, '_blank')
-        showToast("Ruta abierta en Google Maps", "success")
+            showToast("Ruta guardada exitosamente", "success")
+            setSelectedIds(new Set()) // Clear selection
+            setActiveTab('list') // Switch to list view
+        } catch (e) {
+            console.error(e)
+            showToast("Error al guardar ruta: " + e.message, "error")
+        }
+    }
+
+    const handleViewRoute = async (routeId) => {
+        try {
+            // Fetch route details + stops + machines
+            const { data: route, error } = await supabase
+                .from('routes')
+                .select(`
+                    *,
+                    route_stops (
+                        id,
+                        stop_order,
+                        status,
+                        machines (
+                            id, location_name, address, maps_url
+                        )
+                    )
+                `)
+                .eq('id', routeId)
+                .single()
+
+            if (route) {
+                // Sort stops by order
+                route.route_stops.sort((a, b) => a.stop_order - b.stop_order)
+                setViewingRoute(route)
+            }
+        } catch (e) {
+            console.error(e)
+            showToast("Error cargando detalles", "error")
+        }
+    }
+
+    const handleDeleteRoute = async (routeId) => {
+        if (!window.confirm("¿Estás seguro de eliminar esta ruta?")) return
+
+        try {
+            const { error } = await supabase.from('routes').delete().eq('id', routeId)
+            if (error) throw error
+
+            showToast("Ruta eliminada", "success")
+            fetchRoutes() // Refresh list
+            if (viewingRoute?.id === routeId) setViewingRoute(null)
+        } catch (e) {
+            showToast("Error al eliminar", "error")
+        }
+    }
+
+    const handleFinishRoute = async (routeId) => {
+        if (!window.confirm("¿Finalizar ruta y marcar como completada?")) return
+
+        try {
+            await supabase.from('routes').update({ status: 'completed' }).eq('id', routeId)
+            showToast("Ruta finalizada", "success")
+            fetchRoutes()
+            setViewingRoute(null)
+        } catch (e) {
+            console.error(e)
+        }
     }
 
     const filteredMachines = machines.filter(m =>
@@ -126,135 +251,251 @@ export default function RoutePlanner() {
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1>Programar Ruta</h1>
-                        <p className="subtitle">Selecciona los puntos a visitar hoy</p>
+                        <h1>Gestión de Rutas</h1>
+                        <p className="subtitle">Planifica, guarda y ejecuta tus recorridos</p>
                     </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="planner-tabs">
+                    <button
+                        className={`tab-btn ${activeTab === 'new' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('new'); setViewingRoute(null); }}
+                    >
+                        <Plus size={16} /> Nueva Ruta
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'list' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('list')}
+                    >
+                        <List size={16} /> Mis Rutas
+                    </button>
                 </div>
             </header>
 
-            <div className="planner-container">
-                {/* Left: Configuration */}
-                <div className="planner-config glass">
-                    <h3><Calendar size={18} className="teal" /> Detalles de la Ruta</h3>
+            {/* --- VIEW: NEW ROUTE --- */}
+            {activeTab === 'new' && (
+                <div className="planner-container">
+                    {/* Left: Configuration */}
+                    <div className="planner-config glass">
+                        <h3><Calendar size={18} className="teal" /> Detalles de la Ruta</h3>
 
-                    <div className="input-group">
-                        <label>Fecha y Hora</label>
-                        <input
-                            type="datetime-local"
-                            value={scheduleDate}
-                            onChange={(e) => setScheduleDate(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="route-summary">
-                        <div className="summary-item">
-                            <span>Puntos seleccionados:</span>
-                            <strong>{selectedIds.size}</strong>
+                        <div className="input-group">
+                            <label>Fecha y Hora</label>
+                            <input
+                                type="datetime-local"
+                                value={scheduleDate}
+                                onChange={(e) => setScheduleDate(e.target.value)}
+                            />
                         </div>
-                        <div className="summary-item">
-                            <span>Estimación de tiempo:</span>
-                            <strong>~ {selectedIds.size * 20} min</strong>
-                            <small>(20min por punto)</small>
-                        </div>
-                    </div>
 
-                    <button
-                        className="launch-btn"
-                        onClick={handleLaunchRoute}
-                        disabled={selectedIds.size === 0}
-                    >
-                        <Map size={18} />
-                        Generar Ruta en Maps
-                    </button>
-
-                    <p className="hint-text">Se abrirá la aplicación de Google Maps con la ruta optimizada desde tu ubicación actual.</p>
-                </div>
-
-                {/* Right: Selection List */}
-                <div className="planner-main">
-                    {zones.length > 0 && (
-                        <div className="zones-selector glass">
-                            <h3><Layers size={18} className="teal" /> Seleccionar por Zona</h3>
-                            <div className="zones-grid">
-                                {zones.map(z => {
-                                    const machinesInZone = machines.filter(m => m.zone === z)
-                                    const selectedInZone = machinesInZone.filter(m => selectedIds.has(m.id))
-                                    const allInZoneSelected = selectedInZone.length === machinesInZone.length
-
-                                    return (
-                                        <button
-                                            key={z}
-                                            className={`zone-pill ${allInZoneSelected ? 'active' : selectedInZone.length > 0 ? 'partial' : ''}`}
-                                            onClick={() => toggleZone(z)}
-                                        >
-                                            {z} ({selectedInZone.length}/{machinesInZone.length})
-                                        </button>
-                                    )
-                                })}
+                        <div className="route-summary">
+                            <div className="summary-item">
+                                <span>Puntos seleccionados:</span>
+                                <strong>{selectedIds.size}</strong>
+                            </div>
+                            <div className="summary-item">
+                                <span>Estimación de tiempo:</span>
+                                <strong>~ {selectedIds.size * 20} min</strong>
+                                <small>(20min por punto)</small>
                             </div>
                         </div>
-                    )}
 
-                    <div className="machine-selector glass">
-                        <div className="selector-header">
-                            <div className="search-box">
-                                <Search size={16} className="icon" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar punto..."
-                                    value={filterQuery}
-                                    onChange={e => setFilterQuery(e.target.value)}
-                                />
-                            </div>
-                            <button className="select-all-btn" onClick={selectAll}>
-                                {selectedIds.size > 0 && selectedIds.size === filteredMachines.length ? <CheckSquare size={16} /> : <Square size={16} />}
-                                {selectedIds.size === filteredMachines.length ? 'Deseleccionar' : 'Todos'}
+                        <div className="actions-stack">
+                            <button
+                                className="launch-btn secondary"
+                                onClick={handleSaveRoute}
+                                disabled={selectedIds.size === 0}
+                            >
+                                <Save size={18} />
+                                Guardar Ruta
+                            </button>
+
+                            <button
+                                className="launch-btn"
+                                onClick={() => handleLaunchRoute()}
+                                disabled={selectedIds.size === 0}
+                            >
+                                <Map size={18} />
+                                Generar en Maps
                             </button>
                         </div>
 
-                        <div className="selection-list">
-                            {loading ? <p className="loading">Cargando...</p> : filteredMachines.map(m => {
-                                // Check for closed day
-                                const dateObj = new Date(scheduleDate)
-                                const dayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-                                const currentDay = dayOptions[dateObj.getDay()]
+                        <p className="hint-text">Guarda la ruta para seguimiento o ábrela directamente en Google Maps.</p>
+                    </div>
 
-                                // Since users are on local time, and date string is ISO or local-ISO, simple getDay() works if date obj is correct.
-                                // But new Date('2023-01-01') is UTC. new Date('2023-01-01T10:00') is local.
-                                // scheduleDate comes from datetime-local input (YYYY-MM-DDTHH:MM) which renders local time.
+                    {/* Right: Selection List */}
+                    <div className="planner-main">
+                        {zones.length > 0 && (
+                            <div className="zones-selector glass">
+                                <h3><Layers size={18} className="teal" /> Seleccionar por Zona</h3>
+                                <div className="zones-grid">
+                                    {zones.map(z => {
+                                        const machinesInZone = machines.filter(m => m.zone === z)
+                                        const selectedInZone = machinesInZone.filter(m => selectedIds.has(m.id))
+                                        const allInZoneSelected = selectedInZone.length === machinesInZone.length
 
-                                // Be careful: closed_days in DB are likely 'Monday', 'Tuesday', etc.
-                                const isClosed = m.closed_days && m.closed_days.includes(currentDay)
+                                        return (
+                                            <button
+                                                key={z}
+                                                className={`zone-pill ${allInZoneSelected ? 'active' : selectedInZone.length > 0 ? 'partial' : ''}`}
+                                                onClick={() => toggleZone(z)}
+                                            >
+                                                {z} ({selectedInZone.length}/{machinesInZone.length})
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
-                                return (
-                                    <div
-                                        key={m.id}
-                                        className={`select-item ${selectedIds.has(m.id) ? 'selected' : ''} ${isClosed ? 'item-closed' : ''}`}
-                                        onClick={() => toggleSelection(m.id)}
-                                        style={isClosed ? { opacity: 0.6 } : {}}
-                                    >
-                                        <div className="check-indicator">
-                                            {selectedIds.has(m.id) ? <CheckSquare size={20} className="teal" /> : <Square size={20} />}
+                        <div className="machine-selector glass">
+                            {/* Selector Header */}
+                            <div className="selector-header">
+                                <div className="search-box">
+                                    <Search size={16} className="icon" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar punto..."
+                                        value={filterQuery}
+                                        onChange={e => setFilterQuery(e.target.value)}
+                                    />
+                                </div>
+                                <button className="select-all-btn" onClick={selectAll}>
+                                    {selectedIds.size > 0 && selectedIds.size === filteredMachines.length ? <CheckSquare size={16} /> : <Square size={16} />}
+                                    {selectedIds.size === filteredMachines.length ? 'Deseleccionar' : 'Todos'}
+                                </button>
+                            </div>
+
+                            {/* List */}
+                            <div className="selection-list">
+                                {loading ? <p className="loading">Cargando...</p> : filteredMachines.map(m => {
+                                    const dateObj = new Date(scheduleDate)
+                                    const dayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                                    const currentDay = dayOptions[dateObj.getDay()]
+                                    const isClosed = m.closed_days && m.closed_days.includes(currentDay)
+
+                                    return (
+                                        <div
+                                            key={m.id}
+                                            className={`select-item ${selectedIds.has(m.id) ? 'selected' : ''} ${isClosed ? 'item-closed' : ''}`}
+                                            onClick={() => toggleSelection(m.id)}
+                                            style={isClosed ? { opacity: 0.6 } : {}}
+                                        >
+                                            <div className="check-indicator">
+                                                {selectedIds.has(m.id) ? <CheckSquare size={20} className="teal" /> : <Square size={20} />}
+                                            </div>
+                                            <div className="item-info">
+                                                <h4>
+                                                    {m.location_name}
+                                                    {m.zone && <span className="mini-zone">@{m.zone}</span>}
+                                                    {isClosed && <span className="closed-badge">⛔ CERRADO HOY</span>}
+                                                </h4>
+                                                <p>{m.address || 'Sin dirección'}</p>
+                                            </div>
                                         </div>
-                                        <div className="item-info">
-                                            <h4>
-                                                {m.location_name}
-                                                {m.zone && <span className="mini-zone">@{m.zone}</span>}
-                                                {isClosed && <span className="closed-badge">⛔ CERRADO HOY</span>}
-                                            </h4>
-                                            <p>{m.address || 'Sin dirección'}</p>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                            {filteredMachines.length === 0 && !loading && <p className="empty">No se encontraron máquinas.</p>}
+                                    )
+                                })}
+                                {filteredMachines.length === 0 && !loading && <p className="empty">No se encontraron máquinas.</p>}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            {/* --- VIEW: ROUTE LIST --- */}
+            {activeTab === 'list' && !viewingRoute && (
+                <div className="routes-list-container">
+                    {routesLoading ? <p className="loading">Cargando rutas...</p> : savedRoutes.length === 0 ? (
+                        <div className="empty-state glass">
+                            <Map size={48} className="dim-icon" />
+                            <h3>No tienes rutas guardadas</h3>
+                            <p>Crea una nueva ruta en la pestaña "Nueva Ruta".</p>
+                        </div>
+                    ) : (
+                        <div className="routes-grid">
+                            {savedRoutes.map(route => (
+                                <div key={route.id} className="route-card glass" onClick={() => handleViewRoute(route.id)}>
+                                    <div className="route-header">
+                                        <div className="route-date">
+                                            <Calendar size={16} />
+                                            {new Date(route.scheduled_date + 'T00:00:00').toLocaleDateString()}
+                                        </div>
+                                        <span className={`status-badge ${route.status}`}>
+                                            {route.status === 'completed' ? 'Finalizada' : route.status === 'in_progress' ? 'En Curso' : 'Programada'}
+                                        </span>
+                                    </div>
+                                    <h3>{route.name || 'Sin Nombre'}</h3>
+                                    <div className="route-meta">
+                                        <span><Map size={14} /> {route.route_stops[0]?.count || 0} Paradas</span>
+                                    </div>
+                                    <div className="route-actions">
+                                        <button className="icon-btn delete" onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* --- VIEW: ROUTE DETAIL --- */}
+            {activeTab === 'list' && viewingRoute && (
+                <div className="route-detail-container glass">
+                    <div className="detail-header">
+                        <button className="back-link" onClick={() => setViewingRoute(null)}>
+                            <ArrowLeft size={16} /> Volver
+                        </button>
+                        <div className="header-content">
+                            <h2>{viewingRoute.name}</h2>
+                            <span className={`status-badge ${viewingRoute.status}`}>
+                                {viewingRoute.status === 'completed' ? 'Finalizada' : viewingRoute.status === 'in_progress' ? 'En Curso' : 'Programada'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="route-stops-list">
+                        {viewingRoute.route_stops.map((stop, index) => (
+                            <div key={stop.id} className={`stop-item ${stop.status === 'visited' ? 'visited' : ''}`}>
+                                <div className="stop-number">{index + 1}</div>
+                                <div className="stop-info">
+                                    <h4>{stop.machines?.location_name}</h4>
+                                    <p>{stop.machines?.address}</p>
+                                </div>
+                                <div className="stop-status">
+                                    {stop.status === 'visited' && <CheckCircle size={20} className="success-icon" />}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="detail-actions">
+                        <button
+                            className="launch-btn"
+                            onClick={() => handleLaunchRoute(viewingRoute.route_stops.map(s => s.machines))}
+                        >
+                            <Navigation size={18} /> Navegar (Maps)
+                        </button>
+
+                        {viewingRoute.status !== 'completed' && (
+                            <button
+                                className="launch-btn success"
+                                onClick={() => handleFinishRoute(viewingRoute.id)}
+                            >
+                                <CheckCircle size={18} /> Finalizar Ruta
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+<style dangerouslySetInnerHTML={{
+    __html: `
                 .route-page { max-width: 1000px; margin: 0 auto; padding: 20px; color: white; padding-bottom: 80px; }
                 .page-header { display: flex; align-items: center; margin-bottom: 30px; }
                 .header-left { display: flex; align-items: center; gap: 16px; }
@@ -327,7 +568,58 @@ export default function RoutePlanner() {
                 .closed-badge { background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold; }
                 
                 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #333; color: white; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+
+                /* --- NEW STYLES FOR ROUTE MANAGEMENT --- */
+                .planner-tabs { display: flex; gap: 10px; margin-left: auto; }
+                .tab-btn { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim); padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; transition: 0.2s; }
+                .tab-btn.active { background: var(--primary-color); color: black; border-color: var(--primary-color); font-weight: 600; }
+                .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: white; }
+
+                .actions-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
+                .launch-btn.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
+                .launch-btn.secondary:hover { background: rgba(255,255,255,0.15); border-color: white; }
+                .launch-btn.success { background: #10b981; color: black; }
+                
+                .routes-list-container { width: 100%; }
+                .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+                .dim-icon { opacity: 0.2; margin-bottom: 15px; }
+
+                .routes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; width: 100%; }
+                .route-card { cursor: pointer; transition: 0.2s; position: relative; }
+                .route-card:hover { transform: translateY(-3px); border-color: var(--primary-color); }
+                
+                .route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+                .route-date { font-size: 0.8rem; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+                .status-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; font-weight: bold; }
+                .status-badge.scheduled { background: #3b82f6; color: white; }
+                .status-badge.in_progress { background: #f59e0b; color: black; }
+                .status-badge.completed { background: #10b981; color: black; }
+
+                .route-card h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
+                .route-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-dim); }
+                .route-actions { position: absolute; bottom: 15px; right: 15px; opacity: 0; transition: 0.2s; }
+                .route-card:hover .route-actions { opacity: 1; }
+                .icon-btn.delete { background: rgba(220, 38, 38, 0.2); color: #ef4444; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+                .icon-btn.delete:hover { background: #dc2626; color: white; }
+
+                /* Route Detail */
+                .route-detail-container { max-width: 800px; margin: 0 auto; }
+                .detail-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+                .back-link { background: none; border: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0; font-size: 0.9rem; }
+                .back-link:hover { color: white; }
+                .header-content h2 { margin: 0 0 5px 0; font-size: 1.5rem; }
+
+                .route-stops-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+                .stop-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid transparent; }
+                .stop-item.visited { opacity: 0.5; background: rgba(16, 185, 129, 0.05); }
+                .stop-number { width: 28px; height: 28px; background: var(--primary-color); color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
+                .stop-info { flex: 1; }
+                .stop-info h4 { margin: 0; font-size: 1rem; }
+                .stop-info p { margin: 2px 0 0 0; color: var(--text-dim); font-size: 0.85rem; }
+                .success-icon { color: #10b981; }
+
+                .detail-actions { display: flex; gap: 15px; justify-content: flex-end; }
             `}} />
-        </div>
+        </div >
     )
 }
