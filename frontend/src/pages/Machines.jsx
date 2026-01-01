@@ -993,7 +993,7 @@ export default function Machines() {
         .address-link:hover { color: var(--primary-color); }
 
         /* Modal specific hacks for dark input integration */
-        .modal-content { max-width: 500px; padding: 25px; background: #161b22; }
+        .modal-content { max-width: 500px; padding: 25px; background: #161b22; max-height: 90vh; overflow-y: auto; }
         .input-group label { margin-bottom: 6px; display: block; color: #ccc; font-size: 0.9rem; }
         input { 
             background: rgba(0,0,0,0.2) !important; border: 1px solid rgba(255,255,255,0.1) !important; 
