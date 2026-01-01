@@ -247,11 +247,18 @@ export default function Machines() {
                 return
             }
 
-            // Prepare data
+            // Prepare data with sanitation
             const machineData = {
                 ...newMachine,
-                tenant_id: tenantId
+                tenant_id: tenantId,
+                // Ensure empty strings don't break numeric/time columns
+                rent_amount: newMachine.rent_amount === '' ? 0 : parseFloat(newMachine.rent_amount),
+                opening_time: newMachine.opening_time === '' ? null : newMachine.opening_time,
+                closing_time: newMachine.closing_time === '' ? null : newMachine.closing_time,
+                closed_days: newMachine.closed_days || []
             }
+
+            console.log("Saving Machine Data:", machineData)
 
             let error
             if (isEditing) {
@@ -269,28 +276,34 @@ export default function Machines() {
             }
 
             if (!error) {
-                showToast('Máquina guardada exitosamente!', 'success')
+                showToast(isEditing ? 'Máquina actualizada correctamente!' : 'Máquina registrada exitosamente!', 'success')
                 setShowModal(false)
+                // Complete Reset
                 setNewMachine({
                     qr_code_uid: '', location_name: '', address: '', maps_url: '',
                     capsule_capacity: 100, denomination: 10, machine_count: 1, commission_percent: 20, zone: '',
-                    contact_name: '', contact_email: '', contact_phone: ''
+                    contact_name: '', contact_email: '', contact_phone: '',
+                    closed_days: [], opening_time: '', closing_time: '', contract_type: 'commission', rent_periodicity: 'Mensual', rent_amount: ''
                 })
                 setSearchQuery('')
                 setIsEditing(false)
                 setEditingId(null)
                 fetchMachines()
             } else {
+                console.error("Supabase Error:", error)
                 // Handle specific errors
                 if (error.code === '23503') {
-                    showToast("Error crítico: La empresa asociada a este usuario no existe (fue eliminada).", 'error')
+                    showToast("Error crítico: La empresa asociada no existe.", 'error')
                 } else if (error.code === '42501') {
-                    showToast("Permisos insuficientes (RLS). Verifica tu sesión.", 'error')
+                    showToast("Permisos insuficientes. Verifica tu sesión.", 'error')
+                } else if (error.code === '22P02') {
+                    showToast("Error de tipo de dato (Verifica montos y horas).", 'error')
                 } else {
                     showToast("Error al guardar: " + error.message, 'error')
                 }
             }
         } catch (err) {
+            console.error("TryCatch Error:", err)
             showToast("Error inesperado: " + err.message, 'error')
         } finally {
             setIsSubmitting(false)
