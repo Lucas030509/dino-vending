@@ -109,7 +109,16 @@ export default function AdminDashboard({ session }) {
             setTargetTenantReset(null)
         } catch (err) {
             console.error(err)
-            alert('Error al resetear: ' + err.message)
+            // Intentar extraer mensaje real si viene del Edge Function
+            let msg = err.message
+            if (err.context && err.context.json) {
+                // A veces el cliente de Supabase guarda la respuesta JSON aquí
+                const body = await err.context.json().catch(() => ({}))
+                if (body.error) msg = body.error
+            } else if (msg.includes("non-2xx")) {
+                msg = "Posible causa: El cliente no tiene usuario Admin vinculado o hubo un error de servidor."
+            }
+            alert('Error al resetear: ' + msg)
         } finally {
             setLoading(false)
         }

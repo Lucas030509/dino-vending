@@ -47,7 +47,8 @@ serve(async (req) => {
             .select('id, email')
             .eq('tenant_id', target_tenant_id)
             .eq('role', 'admin') // Filtramos al admin principal
-            .single() // Asumimos uno principal
+            .limit(1)
+            .maybeSingle()
 
         if (profileError || !targetProfile) throw new Error('No se encontró un admin para este cliente')
 
