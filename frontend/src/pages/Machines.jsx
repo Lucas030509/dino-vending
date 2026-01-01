@@ -424,6 +424,37 @@ export default function Machines() {
                         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`
                         : '';
 
+                    // Parse Closed Days - KEYS UPDATED
+                    const closedRaw = findValue(row, ['dias de cierre', 'dias_cerrados', 'cerrado', 'descanso', 'dias_no_laborales']) || '';
+                    let daysArray = [];
+                    if (closedRaw && closedRaw != '0') {
+                        daysArray = String(closedRaw).split(',').map(d => {
+                            const clean = d.trim().toLowerCase();
+                            // Spanish & English Mapping
+                            if (clean.includes('lu') || clean.includes('mo')) return 'Monday';
+                            if (clean.includes('ma') || clean.includes('tu')) return 'Tuesday';
+                            if (clean.includes('mi') || clean.includes('we')) return 'Wednesday';
+                            if (clean.includes('ju') || clean.includes('th')) return 'Thursday';
+                            if (clean.includes('vi') || clean.includes('fr')) return 'Friday';
+                            if (clean.includes('sa') || clean.includes('sat')) return 'Saturday';
+                            if (clean.includes('do') || clean.includes('su')) return 'Sunday';
+                            return null;
+                        }).filter(Boolean);
+                    }
+
+                    // Parse Contract Type - KEYS UPDATED
+                    let contractType = 'commission';
+                    const cTypeRaw = String(findValue(row, ['tipo de pago', 'tipo_contrato', 'contrato', 'modelo']) || '').toLowerCase();
+                    if (cTypeRaw.includes('rent') || cTypeRaw.includes('fijo') || cTypeRaw.includes('alquiler')) {
+                        contractType = 'rent';
+                    }
+
+                    // Parse Times
+                    // Basic safeguard: if excel sends serial number for time, we might skip it for now or assume HH:MM text
+                    const openTime = findValue(row, ['apertura', 'hora_abierto', 'opening']) || null;
+                    const closeTime = findValue(row, ['cierre', 'hora_cierre', 'closing']) || null;
+
+
                     const machineObj = {
                         tenant_id: tenantId,
                         qr_code_uid: uid,
@@ -435,7 +466,17 @@ export default function Machines() {
                         maps_url: findValue(row, ['maps', 'url', 'mapa']) || generatedMapUrl,
                         current_status: 'Active',
                         zone: findValue(row, ['zona', 'sector', 'area']) || '',
-                        machine_count: parseInt(findValue(row, ['cantidad', 'maquinas', 'unidades']) || 1)
+                        machine_count: parseInt(findValue(row, ['cantidad', 'maquinas', 'unidades']) || 1),
+                        contact_name: findValue(row, ['contacto', 'encargado', 'dueño', 'contacto_nombre']) || '',
+                        contact_email: findValue(row, ['email', 'correo', 'contacto_email']) || '',
+                        contact_phone: findValue(row, ['telefono', 'celular', 'tel', 'contacto_tel']) || '',
+                        // V3 Fields
+                        closed_days: daysArray,
+                        opening_time: openTime,
+                        closing_time: closeTime,
+                        contract_type: contractType,
+                        rent_amount: parseFloat(findValue(row, ['importe renta', 'renta', 'monto_renta', 'pago_fijo']) || 0),
+                        rent_periodicity: findValue(row, ['periodicidad', 'periodo_renta']) || 'Mensual'
                     };
 
                     if (uidMap.has(cleanUid)) {
@@ -444,6 +485,8 @@ export default function Machines() {
 
                     return machineObj;
                 });
+
+                console.log("Machines Payload for Upsert:", machinesToUpsert)
 
                 const { error } = await supabase.from('machines').upsert(machinesToUpsert);
 
