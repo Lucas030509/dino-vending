@@ -260,7 +260,14 @@ export default function Machines() {
                 setEditingId(null)
                 fetchMachines()
             } else {
-                showToast("Error al guardar: " + error.message, 'error')
+                // Handle specific errors
+                if (error.code === '23503') {
+                    showToast("Error crítico: La empresa asociada a este usuario no existe (fue eliminada).", 'error')
+                } else if (error.code === '42501') {
+                    showToast("Permisos insuficientes (RLS). Verifica tu sesión.", 'error')
+                } else {
+                    showToast("Error al guardar: " + error.message, 'error')
+                }
             }
         } catch (err) {
             showToast("Error inesperado: " + err.message, 'error')

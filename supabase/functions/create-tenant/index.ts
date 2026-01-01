@@ -72,12 +72,15 @@ serve(async (req) => {
                 console.log("Usuario ya existe. Vinculando y ACTUALIZANDO PASSWORD para ID:", existingUser.id)
                 targetUserId = existingUser.id
 
-                // IMPORTANTE: Forzamos la actualización de contraseña para que coincida con lo que el Admin escribió
+                // IMPORTANTE: Forzamos la actualización de contraseña Y METADATA (tenant_id)
                 const { error: updatePassError } = await supabaseAdmin.auth.admin.updateUserById(
                     existingUser.id,
-                    { password: password }
+                    {
+                        password: password,
+                        user_metadata: { tenant_id: tenant.id } // <--- Actualizamos el vínculo a la nueva empresa
+                    }
                 )
-                if (updatePassError) console.error("Error actualizando password de usuario existente:", updatePassError)
+                if (updatePassError) console.error("Error actualizando usuario existente:", updatePassError)
 
             } else {
                 console.error("Error fatal creando usuario:", createError)
