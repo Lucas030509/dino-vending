@@ -674,7 +674,7 @@ export default function Machines() {
                     {machines.filter(m => selectedIds.has(m.id)).map(m => (
                         <div key={m.id} className="qr-sticker">
                             <div className="qr-box">
-                                <QRCodeSVG value={`${window.location.origin}/report/${m.qr_code_uid}`} size={120} />
+                                <QRCodeSVG value={`${window.location.origin}/report/${m.id}`} size={120} />
                             </div>
                             <div className="qr-info">
                                 <strong>{m.location_name}</strong>

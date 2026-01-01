@@ -23,11 +23,11 @@ export default function PublicReport() {
 
     const fetchMachineDetails = async () => {
         try {
-            // Find machine by UID (case insensitive ideally, but strict for now)
+            // Find machine by ID (UUID) from the URL param
             const { data, error } = await supabase
                 .from('machines')
-                .select('location_name, id')
-                .eq('qr_code_uid', uid)
+                .select('location_name, id, qr_code_uid')
+                .eq('id', uid)
                 .single()
 
             if (data) {
@@ -106,7 +106,7 @@ export default function PublicReport() {
             <div className="report-page success-view">
                 <CheckCircle2 size={64} className="success-icon" />
                 <h2>¡Reporte Enviado!</h2>
-                <p>Gracias por avisarnos. Un técnico revisará la máquina {uid} lo antes posible.</p>
+                <p>Gracias por avisarnos. Un técnico revisará la máquina {machine?.qr_code_uid || uid} lo antes posible.</p>
                 <div className="card-logo">
                     DinoPlatform
                 </div>
@@ -120,7 +120,7 @@ export default function PublicReport() {
                 <h3>Reportar Problema</h3>
                 {loading ? <Loader2 className="spin" /> : (
                     <p className="machine-badge">
-                        {machine ? machine.location_name : 'Máquina Desconocida'} ({uid})
+                        {machine ? machine.location_name : 'Máquina Desconocida'} ({machine?.qr_code_uid || '...'})
                     </p>
                 )}
             </header>
