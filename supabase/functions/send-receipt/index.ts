@@ -66,7 +66,42 @@ serve(async (req) => {
          </div>`
       : ''
 
-    // 3. HTML del Correo (Ticket Style)
+    // 3. HTML del Correo (Ticket Style - Conditional)
+    const isRent = machine.contract_type === 'rent'
+    const reportTitle = isRent ? 'Comprobante de Servicio' : 'Recibo de Corte'
+
+    let financialDetailsHtml = ''
+
+    if (isRent) {
+      // Mensaje simple para Renta
+      financialDetailsHtml = `
+        <div style="background: #ecfdf5; color: #065f46; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px solid #a7f3d0;">
+            <p style="margin: 0; font-weight: bold; font-size: 16px;">✅ Servicio Completado</p>
+            <p style="margin: 8px 0 0 0; font-size: 13px;">La máquina ha sido visitada, rellenada y verificada correctamente.</p>
+        </div>
+       `
+    } else {
+      // Detalle financiero para Comisión
+      financialDetailsHtml = `
+          <div class="row">
+            <span class="label">Monto Recolectado</span>
+            <span class="value">$${collection.gross_amount.toFixed(2)}</span>
+          </div>
+          
+          <div class="divider"></div>
+
+          <div class="row">
+             <span class="label">Comisión Pactada</span>
+             <span class="value">${collection.commission_percent_snapshot}%</span>
+          </div>
+
+          <div class="total-row">
+            <span>A Pagar (Comisión):</span>
+            <span class="highlight">$${collection.commission_amount.toFixed(2)}</span>
+          </div>
+       `
+    }
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -90,27 +125,13 @@ serve(async (req) => {
       <body>
         <div class="ticket">
           <div class="header">
-            <h1 class="title">Recibo de Corte</h1>
+            <h1 class="title">${reportTitle}</h1>
             <p class="subtitle">${machine.location_name}</p>
             <p style="font-size: 12px; color: #a1a1aa; margin: 0;">${formattedDate}</p>
           </div>
 
-          <div class="row">
-            <span class="label">Monto Recolectado</span>
-            <span class="value">$${collection.gross_amount.toFixed(2)}</span>
-          </div>
-          
-          <div class="divider"></div>
+          ${financialDetailsHtml}
 
-          <div class="row">
-             <span class="label">Comisión Pactada</span>
-             <span class="value">${collection.commission_percent_snapshot}%</span>
-          </div>
-
-          <div class="total-row">
-            <span>A Pagar (Comisión):</span>
-            <span class="highlight">$${collection.commission_amount.toFixed(2)}</span>
-          </div>
 
           <div style="margin-top: 25px; background: #f8fafc; padding: 15px; border-radius: 8px;">
             <p style="margin: 0 0 10px 0; font-size: 12px; color: #64748b; font-weight: bold;">DETALLES OPERATIVOS</p>

@@ -213,21 +213,40 @@ export default function RoutePlanner() {
                         </div>
 
                         <div className="selection-list">
-                            {loading ? <p className="loading">Cargando...</p> : filteredMachines.map(m => (
-                                <div
-                                    key={m.id}
-                                    className={`select-item ${selectedIds.has(m.id) ? 'selected' : ''}`}
-                                    onClick={() => toggleSelection(m.id)}
-                                >
-                                    <div className="check-indicator">
-                                        {selectedIds.has(m.id) ? <CheckSquare size={20} className="teal" /> : <Square size={20} />}
+                            {loading ? <p className="loading">Cargando...</p> : filteredMachines.map(m => {
+                                // Check for closed day
+                                const dateObj = new Date(scheduleDate)
+                                const dayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                                const currentDay = dayOptions[dateObj.getDay()]
+
+                                // Since users are on local time, and date string is ISO or local-ISO, simple getDay() works if date obj is correct.
+                                // But new Date('2023-01-01') is UTC. new Date('2023-01-01T10:00') is local.
+                                // scheduleDate comes from datetime-local input (YYYY-MM-DDTHH:MM) which renders local time.
+
+                                // Be careful: closed_days in DB are likely 'Monday', 'Tuesday', etc.
+                                const isClosed = m.closed_days && m.closed_days.includes(currentDay)
+
+                                return (
+                                    <div
+                                        key={m.id}
+                                        className={`select-item ${selectedIds.has(m.id) ? 'selected' : ''} ${isClosed ? 'item-closed' : ''}`}
+                                        onClick={() => toggleSelection(m.id)}
+                                        style={isClosed ? { opacity: 0.6 } : {}}
+                                    >
+                                        <div className="check-indicator">
+                                            {selectedIds.has(m.id) ? <CheckSquare size={20} className="teal" /> : <Square size={20} />}
+                                        </div>
+                                        <div className="item-info">
+                                            <h4>
+                                                {m.location_name}
+                                                {m.zone && <span className="mini-zone">@{m.zone}</span>}
+                                                {isClosed && <span className="closed-badge">⛔ CERRADO HOY</span>}
+                                            </h4>
+                                            <p>{m.address || 'Sin dirección'}</p>
+                                        </div>
                                     </div>
-                                    <div className="item-info">
-                                        <h4>{m.location_name} {m.zone && <span className="mini-zone">@{m.zone}</span>}</h4>
-                                        <p>{m.address || 'Sin dirección'}</p>
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                             {filteredMachines.length === 0 && !loading && <p className="empty">No se encontraron máquinas.</p>}
                         </div>
                     </div>
@@ -305,6 +324,7 @@ export default function RoutePlanner() {
                 .mini-zone { color: var(--primary-color); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; background: rgba(16, 185, 129, 0.1); padding: 2px 4px; border-radius: 3px; }
                 .item-info p { margin: 0; color: var(--text-dim); font-size: 0.8rem; }
                 .teal { color: var(--primary-color); }
+                .closed-badge { background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold; }
                 
                 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #333; color: white; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
             `}} />
