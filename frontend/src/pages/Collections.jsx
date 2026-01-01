@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine } from 'lucide-react'
+import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser } from 'lucide-react'
+import SignatureCanvas from 'react-signature-canvas'
 
 export default function Collections() {
     const [machines, setMachines] = useState([])
@@ -22,6 +23,11 @@ export default function Collections() {
         }
     }
     const hideToast = () => setToast({ ...toast, show: false })
+
+    // Evidence State
+    const [photoBlob, setPhotoBlob] = useState(null)
+    const [photoPreview, setPhotoPreview] = useState(null)
+    const signatureRef = useRef(null)
 
     // Form State for New Collection
     const [newCollection, setNewCollection] = useState({
@@ -114,7 +120,36 @@ export default function Collections() {
             cost_product: 2.5,
             commission_percent: machine.commission_percent || 0
         })
+        setPhotoBlob(null)
+        setPhotoPreview(null)
+        // Signature ref reset happens automatically on re-render, but we might need to clear canvas later
         setShowModal(true)
+    }
+
+    const handlePhotoSelect = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setPhotoBlob(file)
+            setPhotoPreview(URL.createObjectURL(file))
+        }
+    }
+
+    const clearSignature = () => {
+        signatureRef.current?.clear()
+    }
+
+    const uploadEvidence = async (file, path) => {
+        const { data, error } = await supabase.storage
+            .from('collection-evidence')
+            .upload(path, file)
+
+        if (error) throw error
+
+        const { data: publicData } = supabase.storage
+            .from('collection-evidence')
+            .getPublicUrl(path)
+
+        return publicData.publicUrl
     }
 
     const handleRegisterCollection = async (e) => {
@@ -137,11 +172,31 @@ export default function Collections() {
             // Calculate next refill date
             const nextDate = new Date()
             nextDate.setDate(nextDate.getDate() + parseInt(newCollection.next_refill_days))
+            const nextVisitDateStr = nextDate.toISOString().split('T')[0]
 
             const { data: { user } } = await supabase.auth.getUser()
 
-            // 1. Insert Collection Record
-            const { error } = await supabase.from('collections').insert({
+            // --- EVIDENCE UPLOAD ---
+            let photoUrl = null
+            let signatureUrl = null
+            const timestamp = Date.now()
+
+            // 1. Upload Photo
+            if (photoBlob) {
+                const photoPath = `${selectedMachine.tenant_id}/${selectedMachine.id}/${timestamp}_photo.jpg`
+                photoUrl = await uploadEvidence(photoBlob, photoPath)
+            }
+
+            // 2. Upload Signature
+            if (signatureRef.current && !signatureRef.current.isEmpty()) {
+                const sigData = signatureRef.current.toDataURL('image/png')
+                const sigBlob = await (await fetch(sigData)).blob()
+                const sigPath = `${selectedMachine.tenant_id}/${selectedMachine.id}/${timestamp}_sig.png`
+                signatureUrl = await uploadEvidence(sigBlob, sigPath)
+            }
+
+            // 3. Insert Collection Record
+            const { data: insertedData, error } = await supabase.from('collections').insert({
                 tenant_id: selectedMachine.tenant_id,
                 machine_id: selectedMachine.id,
                 collection_date: newCollection.collection_date,
@@ -152,22 +207,34 @@ export default function Collections() {
                 units_sold: units,
                 unit_cost_capsule: costCap,
                 unit_cost_product: costProd,
-                unit_cost_capsule: costCap,
-                unit_cost_product: costProd,
                 commission_percent_snapshot: newCollection.commission_percent, // Save the used percent
-                next_refill_date_estimate: nextDate.toISOString().split('T')[0],
+                next_refill_date_estimate: nextVisitDateStr,
+                next_visit_date: nextVisitDateStr, // New column
                 notes: newCollection.notes,
-                created_by: user.id
-            })
+                created_by: user.id,
+                evidence_photo_url: photoUrl,
+                evidence_signature_url: signatureUrl
+            }).select().single()
 
             if (error) throw error
 
             showToast('Corte registrado exitosamente!', 'success')
+
+            // --- TRIGGER AUTOMATIC EMAIL (Fire and Forget) ---
+            if (selectedMachine.contact_email) {
+                supabase.functions.invoke('send-receipt', {
+                    body: { collection_id: insertedData.id }
+                }).then(({ error }) => {
+                    if (error) console.error("Error enviando recibo:", error)
+                    else console.log("Recibo enviado correctamente")
+                })
+            }
+
             setShowModal(false)
             fetchData() // Refresh list
 
         } catch (err) {
-            console.error('Error registering collection:', err)
+            console.error('Error recording collection:', err)
             showToast(err.message, 'error')
         } finally {
             setIsSubmitting(false)
@@ -304,150 +371,161 @@ export default function Collections() {
                         </div>
 
                         <form onSubmit={handleRegisterCollection}>
-                            <div className="kpi-summary">
-                                <div className="kpi-box">
-                                    <span className="label">Comisión ({newCollection.commission_percent}%)</span>
-                                    <span className="value arg-red">-${commissionAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="kpi-box">
-                                    <span className="label">Gastos (Cápsulas)</span>
-                                    <span className="value arg-red">-${totalExpenses.toFixed(2)}</span>
-                                </div>
-                                <div className="kpi-box highlight">
-                                    <span className="label">Ganancia Final</span>
-                                    <span className="value">${profitAmount.toFixed(2)}</span>
-                                </div>
-                            </div>
+                            <div className="modal-body-grid">
+                                {/* Columna Izquierda: Datos Financieros */}
+                                <div className="modal-column">
+                                    <div className="form-section-title">Datos del Corte</div>
 
-                            <div className="form-section-title">Detalles del Corte</div>
-                            <div className="form-grid">
-                                <div className="input-group">
-                                    <label>Comisión (%)</label>
-                                    <input
-                                        type="number"
-                                        min="0" max="100" step="0.5"
-                                        value={newCollection.commission_percent}
-                                        onChange={e => setNewCollection({ ...newCollection, commission_percent: parseFloat(e.target.value) })}
-                                        required
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label>Fecha del Corte</label>
-                                    <input
-                                        type="date"
-                                        value={newCollection.collection_date}
-                                        onChange={e => setNewCollection({ ...newCollection, collection_date: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-grid">
-                                <div className="input-group">
-                                    <label>Monto Recolectado ($)</label>
-                                    <input
-                                        type="number"
-                                        step="0.50"
-                                        placeholder="0.00"
-                                        value={newCollection.gross_amount}
-                                        onChange={e => setNewCollection({ ...newCollection, gross_amount: e.target.value })}
-                                        required
-                                        autoFocus
-                                        className="money-input"
-                                    />
-                                </div>
-                                <div className="input-group info-group">
-                                    <label>Capacidad / Precio</label>
-                                    <div className="info-display">
-                                        <span>${selectedMachine.denomination} MXN</span>
+                                    <div className="input-group">
+                                        <label>Fecha del Corte</label>
+                                        <input
+                                            type="date"
+                                            value={newCollection.collection_date}
+                                            onChange={e => setNewCollection({ ...newCollection, collection_date: e.target.value })}
+                                            required
+                                        />
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="form-grid">
-                                <div className="input-group">
-                                    <label>Unidades Vendidas (Est.)</label>
-                                    <input
-                                        type="number"
-                                        value={newCollection.units_sold}
-                                        onChange={e => setNewCollection({ ...newCollection, units_sold: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-section-title mt-4">Calculadora de Costos (Unitarios)</div>
-                            <div className="form-grid compact-grid">
-
-                                <div className="input-group">
-                                    <label>Costo X Cápsula ($)</label>
-                                    <input
-                                        type="number" step="0.10"
-                                        value={newCollection.cost_capsule}
-                                        onChange={e => setNewCollection({ ...newCollection, cost_capsule: e.target.value })}
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label>Costo X Juguete ($)</label>
-                                    <input
-                                        type="number" step="0.10"
-                                        value={newCollection.cost_product}
-                                        onChange={e => setNewCollection({ ...newCollection, cost_product: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="calc-preview glass">
-                                <div className="row">
-                                    <span>Monto Bruto:</span>
-                                    <span>${newCollection.gross_amount || '0.00'}</span>
-                                </div>
-                                <div className="row red">
-                                    <span>- Comisión ({newCollection.commission_percent}%):</span>
-                                    <span>${commissionAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="row red">
-                                    <span>- Costo Producto ({newCollection.units_sold}u x ${parseFloat(newCollection.cost_capsule) + parseFloat(newCollection.cost_product)}):</span>
-                                    <span>${totalExpenses.toFixed(2)}</span>
-                                </div>
-                                <div className="row total">
-                                    <span>Ganancia Neta:</span>
-                                    <span>${profitAmount.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div className="form-section-title mt-4">Próxima Visita</div>
-                            <div className="input-group">
-                                <label>Días estimados para siguiente relleno</label>
-                                <div className="days-selector">
-                                    {[7, 15, 30, 45].map(days => (
-                                        <button
-                                            type="button"
-                                            key={days}
-                                            className={newCollection.next_refill_days == days ? 'active' : ''}
-                                            onClick={() => setNewCollection({ ...newCollection, next_refill_days: days })}
-                                        >
-                                            {days}d
-                                        </button>
-                                    ))}
-                                    <div className="custom-days-wrapper">
+                                    <div className="input-group">
+                                        <label>Monto Recolectado ($)</label>
                                         <input
                                             type="number"
-                                            className="custom-days"
-                                            placeholder="Otro"
-                                            value={newCollection.next_refill_days}
-                                            onChange={e => setNewCollection({ ...newCollection, next_refill_days: e.target.value })}
+                                            step="0.50"
+                                            placeholder="0.00"
+                                            value={newCollection.gross_amount}
+                                            onChange={e => setNewCollection({ ...newCollection, gross_amount: e.target.value })}
+                                            required
+                                            className="money-input"
                                         />
-                                        <span>días</span>
+                                    </div>
+
+                                    <div className="input-group">
+                                        <label>Comisión del Lugar (%)</label>
+                                        <div className="commission-control">
+                                            <input
+                                                type="number"
+                                                min="0" max="100" step="0.5"
+                                                value={newCollection.commission_percent}
+                                                onChange={e => setNewCollection({ ...newCollection, commission_percent: parseFloat(e.target.value) })}
+                                                required
+                                            />
+                                            <div className="commission-value">
+                                                = ${commissionAmount.toFixed(2)}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-section-title mt-4">Próxima Visita</div>
+                                    <div className="input-group">
+                                        <div className="days-selector compact">
+                                            {[7, 15, 30].map(days => (
+                                                <button
+                                                    type="button"
+                                                    key={days}
+                                                    className={newCollection.next_refill_days == days ? 'active' : ''}
+                                                    onClick={() => setNewCollection({ ...newCollection, next_refill_days: days })}
+                                                >
+                                                    {days}d
+                                                </button>
+                                            ))}
+                                            <div className="custom-days-wrapper">
+                                                <input
+                                                    type="number"
+                                                    className="custom-days"
+                                                    placeholder="#"
+                                                    value={newCollection.next_refill_days}
+                                                    onChange={e => setNewCollection({ ...newCollection, next_refill_days: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Costos Operativos (Colapsables o discretos) */}
+                                    <div className="details-disclosure">
+                                        <details>
+                                            <summary>Detalles Operativos (Costos)</summary>
+                                            <div className="form-grid compact-grid mt-2">
+                                                <div className="input-group">
+                                                    <label>Unidades Vendidas</label>
+                                                    <input
+                                                        type="number"
+                                                        value={newCollection.units_sold}
+                                                        onChange={e => setNewCollection({ ...newCollection, units_sold: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="input-group">
+                                                    <label>Costo Unitario ($)</label>
+                                                    <input
+                                                        type="number" step="0.10"
+                                                        value={newCollection.cost_capsule}
+                                                        onChange={e => setNewCollection({ ...newCollection, cost_capsule: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </div>
+
+                                {/* Columna Derecha: Evidencias */}
+                                <div className="modal-column right-col">
+                                    <div className="form-section-title">Evidencias</div>
+
+                                    <div className="evidence-stack">
+                                        {/* Photo Evidence */}
+                                        <div className="evidence-card">
+                                            <div className="photo-upload-area" onClick={() => document.getElementById('evidence-upload').click()}>
+                                                {photoPreview ? (
+                                                    <>
+                                                        <img src={photoPreview} alt="Evidencia" className="photo-preview" />
+                                                        <div className="photo-overlay"><Camera size={16} /> Cambiar</div>
+                                                    </>
+                                                ) : (
+                                                    <div className="upload-placeholder">
+                                                        <Camera size={28} className="icon-glow" />
+                                                        <span>Foto Contador</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <input
+                                                type="file"
+                                                id="evidence-upload"
+                                                accept="image/*"
+                                                capture="environment"
+                                                style={{ display: 'none' }}
+                                                onChange={handlePhotoSelect}
+                                            />
+                                        </div>
+
+                                        {/* Signature */}
+                                        <div className="evidence-card">
+                                            <div className="sig-header">
+                                                <label>Firma Conformidad</label>
+                                                <button type="button" onClick={clearSignature} className="clear-link">Limpiar</button>
+                                            </div>
+                                            <div className="sig-canvas-wrapper">
+                                                <SignatureCanvas
+                                                    ref={signatureRef}
+                                                    penColor="white"
+                                                    canvasProps={{ className: 'sig-canvas' }}
+                                                    backgroundColor="rgba(255,255,255,0.02)"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="modal-actions">
-                                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
-                                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Registrando...' : 'Confirmar Corte'}
-                                </button>
+                            <div className="modal-footer">
+                                <div className="profit-summary">
+                                    <span className="label">A Pagar al Cliente:</span>
+                                    <span className="val highlight">${commissionAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
+                                    <button type="submit" className="btn-primary full-width" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Procesando...' : 'Guardar Corte'}
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div >
@@ -457,7 +535,7 @@ export default function Collections() {
 
             <style dangerouslySetInnerHTML={{
                 __html: `
-        .collections-page { padding: 20px; max-width: 1200px; margin: 0 auto; color: white; }
+        .collections-page { padding: 20px; max-width: 1400px; margin: 0 auto; color: white; }
         .page-header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
         .header-left { display: flex; align-items: center; gap: 16px; }
         .back-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: white; transition: all 0.2s; }

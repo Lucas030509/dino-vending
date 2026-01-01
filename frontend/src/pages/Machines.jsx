@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square, User, Mail, Phone } from 'lucide-react'
 import { read, utils } from 'xlsx'
 import { QRCodeSVG } from 'qrcode.react'
 import { jsPDF } from 'jspdf'
@@ -26,7 +26,10 @@ export default function Machines() {
         denomination: 10,
         machine_count: 1,
         commission_percent: 20,
-        zone: ''
+        zone: '',
+        contact_name: '',
+        contact_email: '',
+        contact_phone: ''
     })
     const [isEditing, setIsEditing] = useState(false)
     const [editingId, setEditingId] = useState(null)
@@ -190,7 +193,10 @@ export default function Machines() {
             denomination: machine.denomination || 10,
             machine_count: machine.machine_count || 1,
             commission_percent: machine.commission_percent || 0,
-            zone: machine.zone || ''
+            zone: machine.zone || '',
+            contact_name: machine.contact_name || '',
+            contact_email: machine.contact_email || '',
+            contact_phone: machine.contact_phone || ''
         })
         setSearchQuery(machine.address || '')
         setEditingId(machine.id)
@@ -253,7 +259,8 @@ export default function Machines() {
                 setShowModal(false)
                 setNewMachine({
                     qr_code_uid: '', location_name: '', address: '', maps_url: '',
-                    capsule_capacity: 100, denomination: 10, machine_count: 1, commission_percent: 20, zone: ''
+                    capsule_capacity: 100, denomination: 10, machine_count: 1, commission_percent: 20, zone: '',
+                    contact_name: '', contact_email: '', contact_phone: ''
                 })
                 setSearchQuery('')
                 setIsEditing(false)
@@ -483,7 +490,8 @@ export default function Machines() {
                             setIsEditing(false);
                             setNewMachine({
                                 qr_code_uid: '', location_name: '', address: '', maps_url: '',
-                                capsule_capacity: 100, denomination: 10, machine_count: 1, commission_percent: 20, zone: ''
+                                capsule_capacity: 100, denomination: 10, machine_count: 1, commission_percent: 20, zone: '',
+                                contact_name: '', contact_email: '', contact_phone: ''
                             });
                             setShowModal(true);
                         }} className="add-btn primary">
@@ -627,6 +635,43 @@ export default function Machines() {
                                         value={newMachine.commission_percent}
                                         onChange={e => setNewMachine({ ...newMachine, commission_percent: parseFloat(e.target.value) })}
                                     />
+                                </div>
+                            </div>
+
+                            {/* Sección de Contacto */}
+                            <div className="form-section-divider">
+                                <h4 style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '20px 0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <User size={16} /> Datos de Contacto (Para Recibos)
+                                </h4>
+                                <div className="input-group">
+                                    <label>Nombre del Encargado / Dueño</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Juan Pérez"
+                                        value={newMachine.contact_name}
+                                        onChange={e => setNewMachine({ ...newMachine, contact_name: e.target.value })}
+                                        className="contact-input"
+                                    />
+                                </div>
+                                <div className="columns-2">
+                                    <div className="input-group">
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> Correo (Recibos)</label>
+                                        <input
+                                            type="email"
+                                            placeholder="cliente@email.com"
+                                            value={newMachine.contact_email}
+                                            onChange={e => setNewMachine({ ...newMachine, contact_email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} /> Teléfono</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="55 1234 5678"
+                                            value={newMachine.contact_phone}
+                                            onChange={e => setNewMachine({ ...newMachine, contact_phone: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
