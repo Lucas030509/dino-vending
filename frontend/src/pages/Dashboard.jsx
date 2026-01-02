@@ -20,6 +20,7 @@ export default function Dashboard({ isSuperAdmin }) {
   const [stockStatus, setStockStatus] = useState([])
   const [agenda, setAgenda] = useState([])
   const [pendingReports, setPendingReports] = useState(0)
+  const [todayRoutesCount, setTodayRoutesCount] = useState(0)
 
 
   // Branding State
@@ -51,6 +52,7 @@ export default function Dashboard({ isSuperAdmin }) {
     fetchHistoricalData()
     fetchStockAndAgenda()
     fetchPendingReports()
+    fetchTodayRoutes()
   }, [])
 
   const checkAdminStatus = async () => {
@@ -77,6 +79,19 @@ export default function Dashboard({ isSuperAdmin }) {
       .neq('status', 'Resolved')
 
     if (!error) setPendingReports(count || 0)
+  }
+
+  const fetchTodayRoutes = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const { count, error } = await supabase
+        .from('routes')
+        .select('*', { count: 'exact', head: true })
+        .eq('scheduled_date', today)
+        .neq('status', 'canceled') // Exclude canceled routes
+
+      if (!error) setTodayRoutesCount(count || 0)
+    } catch (e) { console.error('Error fetching routes:', e) }
   }
 
   const fetchMachines = async () => {
@@ -374,6 +389,17 @@ export default function Dashboard({ isSuperAdmin }) {
       </header >
 
       <div className="stats-grid four-cols">
+        <div
+          className="glass stat-card"
+          onClick={() => todayRoutesCount > 0 && navigate('/routes')}
+          style={{ cursor: todayRoutesCount > 0 ? 'pointer' : 'default', borderColor: todayRoutesCount > 0 ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)' }}
+        >
+          <Map className="icon teal" style={{ background: todayRoutesCount > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)' }} />
+          <div className="stat-content">
+            <span className="label">Rutas de Hoy</span>
+            <span className="value" style={{ color: todayRoutesCount > 0 ? 'var(--primary-color)' : 'white' }}>{todayRoutesCount}</span>
+          </div>
+        </div>
         <div className="glass stat-card">
           <LayoutGrid className="icon teal" />
           <div className="stat-content">
