@@ -457,7 +457,7 @@ export default function Collections() {
                                     <tr key={col.id}>
                                         <td>{(() => {
                                             if (!col.collection_date) return '-'
-                                            const [y, m, d] = col.collection_date.split('-')
+                                            const [y, m, d] = col.collection_date.split('T')[0].split('-')
                                             return `${d}/${m}/${y}`
                                         })()}</td>
                                         <td>{col.machines?.location_name || 'Desconocida'}</td>
@@ -809,7 +809,7 @@ export default function Collections() {
                                     <span className="label">Fecha:</span>
                                     <span className="val">{(() => {
                                         if (!viewingCollection.collection_date) return '-'
-                                        const [y, m, d] = viewingCollection.collection_date.split('-')
+                                        const [y, m, d] = viewingCollection.collection_date.split('T')[0].split('-')
                                         return `${d}/${m}/${y}`
                                     })()}</span>
                                 </div>
