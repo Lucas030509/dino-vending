@@ -300,6 +300,7 @@ export default function Collections() {
                 const { error: reportError } = await supabase.from('reports').insert({
                     tenant_id: selectedMachine.tenant_id,
                     machine_id: selectedMachine.id,
+                    machine_uid: selectedMachine.qr_code_uid, // Required for Reports Display
                     report_type: reportForm.type,
                     description: reportForm.description,
                     contact_phone: 'N/A', // Internal report
