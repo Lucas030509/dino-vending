@@ -490,12 +490,9 @@ export default function RoutePlanner() {
                     </div>
                 </div>
             )}
-        </div>
-    )
-}
 
-<style dangerouslySetInnerHTML={{
-    __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 .route-page { max-width: 1000px; margin: 0 auto; padding: 20px; color: white; padding-bottom: 80px; }
                 .page-header { display: flex; align-items: center; margin-bottom: 30px; }
                 .header-left { display: flex; align-items: center; gap: 16px; }
@@ -620,6 +617,7 @@ export default function RoutePlanner() {
 
                 .detail-actions { display: flex; gap: 15px; justify-content: flex-end; }
             `}} />
-        </div >
+        </div>
     )
 }
+

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser } from 'lucide-react'
+import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser, Eye } from 'lucide-react'
 import SignatureCanvas from 'react-signature-canvas'
 
 export default function Collections() {
@@ -27,7 +27,14 @@ export default function Collections() {
     // Evidence State
     const [photoBlob, setPhotoBlob] = useState(null)
     const [photoPreview, setPhotoPreview] = useState(null)
+    const [signaturePreview, setSignaturePreview] = useState(null) // To store the png data url
     const signatureRef = useRef(null)
+
+    // Modals State
+    const [showPhotoModal, setShowPhotoModal] = useState(false)
+    const [showSignatureModal, setShowSignatureModal] = useState(false)
+    const [viewingCollection, setViewingCollection] = useState(null)
+    const [resendingId, setResendingId] = useState(null)
 
     // Form State for New Collection
     const [newCollection, setNewCollection] = useState({
@@ -141,6 +148,9 @@ export default function Collections() {
         })
         setPhotoBlob(null)
         setPhotoPreview(null)
+        setSignaturePreview(null)
+        setShowPhotoModal(false)
+        setShowSignatureModal(false)
         // Signature ref reset happens automatically on re-render, but we might need to clear canvas later
         setShowModal(true)
     }
@@ -153,8 +163,19 @@ export default function Collections() {
         }
     }
 
+    const handleConfirmSignature = () => {
+        if (signatureRef.current && !signatureRef.current.isEmpty()) {
+            const dataUrl = signatureRef.current.toDataURL('image/png')
+            setSignaturePreview(dataUrl)
+            setShowSignatureModal(false)
+        } else {
+            showToast("Por favor firma antes de guardar", "error")
+        }
+    }
+
     const clearSignature = () => {
         signatureRef.current?.clear()
+        setSignaturePreview(null)
     }
 
     const uploadEvidence = async (file, path) => {
@@ -209,9 +230,8 @@ export default function Collections() {
             }
 
             // 2. Upload Signature
-            if (signatureRef.current && !signatureRef.current.isEmpty()) {
-                const sigData = signatureRef.current.toDataURL('image/png')
-                const sigBlob = await (await fetch(sigData)).blob()
+            if (signaturePreview) {
+                const sigBlob = await (await fetch(signaturePreview)).blob()
                 const sigPath = `${selectedMachine.tenant_id}/${selectedMachine.id}/${timestamp}_sig.png`
                 signatureUrl = await uploadEvidence(sigBlob, sigPath)
             }
@@ -263,14 +283,37 @@ export default function Collections() {
     }
 
     const handleDeleteCollection = async (id) => {
-        if (!window.confirm("¿Seguro que deseas eliminar este corte? Esta acción es irreversible.")) return
+        if (confirm('¿Estás seguro de que deseas eliminar este corte? Se recalcularán los contadores.')) {
+            const { error } = await supabase
+                .from('collections')
+                .delete()
+                .eq('id', id)
 
-        const { error } = await supabase.from('collections').delete().eq('id', id)
-        if (error) {
-            showToast("Error al eliminar corte: " + error.message, 'error')
-        } else {
-            showToast("Corte eliminado correctamente", 'success')
-            fetchData()
+            if (error) {
+                console.error('Error deleting collection:', error)
+                showToast('Error al eliminar', 'error')
+            } else {
+                fetchData() // Assuming fetchData also refreshes collections
+                showToast('Corte eliminado correctamente', 'success')
+            }
+        }
+    }
+
+    const handleResendReceipt = async (collectionId) => {
+        try {
+            setResendingId(collectionId)
+            const { data, error } = await supabase.functions.invoke('send-receipt', {
+                body: { collection_id: collectionId }
+            })
+
+            if (error) throw error
+
+            showToast('Correo reenviado con éxito', 'success')
+        } catch (error) {
+            console.error('Error resending receipt:', error)
+            showToast('Error al reenviar correo: ' + error.message, 'error')
+        } finally {
+            setResendingId(null)
         }
     }
 
@@ -368,7 +411,10 @@ export default function Collections() {
                                             ${col.profit_amount ?? col.net_revenue}
                                         </td>
                                         <td>
-                                            <button onClick={() => handleDeleteCollection(col.id)} className="delete-btn-mini">
+                                            <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
+                                                <Eye size={14} />
+                                            </button>
+                                            <button onClick={() => handleDeleteCollection(col.id)} className="delete-btn-mini" title="Eliminar Corte">
                                                 <Trash2 size={14} />
                                             </button>
                                         </td>
@@ -503,50 +549,57 @@ export default function Collections() {
                                     </div>
                                 </div>
 
-                                {/* Columna Derecha: Evidencias */}
+                                {/* Columna Derecha: Evidencias (Action Buttons) */}
                                 <div className="modal-column right-col">
                                     <div className="form-section-title">Evidencias</div>
 
-                                    <div className="evidence-stack">
-                                        {/* Photo Evidence */}
-                                        <div className="evidence-card">
-                                            <div className="photo-upload-area" onClick={() => document.getElementById('evidence-upload').click()}>
-                                                {photoPreview ? (
-                                                    <>
-                                                        <img src={photoPreview} alt="Evidencia" className="photo-preview" />
-                                                        <div className="photo-overlay"><Camera size={16} /> Cambiar</div>
-                                                    </>
-                                                ) : (
-                                                    <div className="upload-placeholder">
-                                                        <Camera size={28} className="icon-glow" />
-                                                        <span>Foto Contador</span>
+                                    <div className="actions-grid">
+                                        {/* Photo Action */}
+                                        <div className="action-card" onClick={() => !photoPreview && setShowPhotoModal(true)}>
+                                            <div className="action-header">
+                                                <label>Foto Contador</label>
+                                                {photoPreview && (
+                                                    <div className="file-controls">
+                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setShowPhotoModal(true); }} className="control-btn">Cambiar</button>
+                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); setPhotoBlob(null); }} className="control-btn danger">Borrar</button>
                                                     </div>
                                                 )}
                                             </div>
-                                            <input
-                                                type="file"
-                                                id="evidence-upload"
-                                                accept="image/*"
-                                                capture="environment"
-                                                style={{ display: 'none' }}
-                                                onChange={handlePhotoSelect}
-                                            />
+
+                                            {photoPreview ? (
+                                                <div className="preview-container">
+                                                    <img src={photoPreview} alt="Evidencia" className="photo-preview-compact" />
+                                                </div>
+                                            ) : (
+                                                <div className="action-placeholder">
+                                                    <Camera size={32} className="action-icon" />
+                                                    <span>Tomar Foto</span>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Signature */}
-                                        <div className="evidence-card">
-                                            <div className="sig-header">
+                                        {/* Signature Action */}
+                                        <div className="action-card" onClick={() => !signaturePreview && setShowSignatureModal(true)}>
+                                            <div className="action-header">
                                                 <label>Firma Conformidad</label>
-                                                <button type="button" onClick={clearSignature} className="clear-link">Limpiar</button>
+                                                {signaturePreview && (
+                                                    <div className="file-controls">
+                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setShowSignatureModal(true); }} className="control-btn">Re-Firmar</button>
+                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setSignaturePreview(null); signatureRef.current?.clear(); }} className="control-btn danger">Borrar</button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="sig-canvas-wrapper">
-                                                <SignatureCanvas
-                                                    ref={signatureRef}
-                                                    penColor="white"
-                                                    canvasProps={{ className: 'sig-canvas' }}
-                                                    backgroundColor="rgba(255,255,255,0.02)"
-                                                />
-                                            </div>
+
+                                            {signaturePreview ? (
+                                                <div className="preview-container">
+                                                    <img src={signaturePreview} alt="Firma" className="sig-preview-compact" />
+                                                </div>
+                                            ) : (
+                                                <div className="action-placeholder">
+                                                    <Eraser size={32} className="action-icon" />
+                                                    <span>Firmar Recibo</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -570,287 +623,281 @@ export default function Collections() {
             )
             }
 
+            {/* --- MODAL FOTO --- */}
+            {showPhotoModal && (
+                <div className="modal-overlay sub-modal">
+                    <div className="glass modal-content compact-modal">
+                        <h3>Subir Evidencia (Contador)</h3>
+                        <div className="photo-drop-zone" onClick={() => document.getElementById('modal-upload').click()}>
+                            {photoPreview ? (
+                                <img src={photoPreview} alt="Preview" className="modal-preview-img" />
+                            ) : (
+                                <div className="drop-placeholder">
+                                    <Camera size={48} />
+                                    <p>Toca para seleccionar o tomar foto</p>
+                                </div>
+                            )}
+                        </div>
+                        <input
+                            type="file"
+                            id="modal-upload"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: 'none' }}
+                            onChange={handlePhotoSelect}
+                        />
+                        <div className="modal-actions">
+                            <button onClick={() => setShowPhotoModal(false)} className="btn-secondary">Cancelar</button>
+                            <button onClick={() => setShowPhotoModal(false)} disabled={!photoBlob} className="btn-primary">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL FIRMA --- */}
+            {showSignatureModal && (
+                <div className="modal-overlay sub-modal">
+                    <div className="glass modal-content compact-modal">
+                        <h3>Firma de Conformidad</h3>
+                        <div className="sig-canvas-large-wrapper">
+                            <SignatureCanvas
+                                ref={signatureRef}
+                                penColor="black"
+                                canvasProps={{ className: 'sig-canvas-large' }}
+                                backgroundColor="white"
+                            />
+                        </div>
+                        <div className="modal-actions center">
+                            <button onClick={clearSignature} className="btn-secondary">Limpiar</button>
+                            <button onClick={() => setShowSignatureModal(false)} className="btn-secondary">Cancelar</button>
+                            <button onClick={handleConfirmSignature} className="btn-primary">Aceptar Firma</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL DETALLE HISTORIAL --- */}
+            {viewingCollection && (
+                <div className="modal-overlay">
+                    <div className="glass modal-content collection-modal detail-mode">
+                        <div className="modal-header">
+                            <h3>Detalle de Corte</h3>
+                            <button className="close-btn" onClick={() => setViewingCollection(null)}>✕</button>
+                        </div>
+
+                        <div className="modal-body-scrolled">
+                            <div className="detail-section">
+                                <div className="detail-row">
+                                    <span className="label">Ubicación:</span>
+                                    <span className="val">{viewingCollection.machines?.location_name}</span>
+                                </div>
+                                <div className="detail-row">
+                                    <span className="label">Fecha:</span>
+                                    <span className="val">{new Date(viewingCollection.collection_date).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+
+                            <div className="detail-section highlight-box">
+                                <div className="detail-row">
+                                    <span className="label">Monto Recolectado:</span>
+                                    <span className="val money">${parseFloat(viewingCollection.gross_amount).toFixed(2)}</span>
+                                </div>
+                                <div className="detail-row">
+                                    <span className="label">Comisión ({viewingCollection.commission_percent_snapshot}%):</span>
+                                    <span className="val commission">-${parseFloat(viewingCollection.commission_amount).toFixed(2)}</span>
+                                </div>
+                                <div className="divider-dash"></div>
+                                <div className="detail-row total">
+                                    <span className="label">Ganancia Neta:</span>
+                                    <span className="val profit">${(parseFloat(viewingCollection.profit_amount) || parseFloat(viewingCollection.net_revenue)).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h4 className="section-header">Evidencias</h4>
+                                <div className="evidence-grid-view">
+                                    {viewingCollection.evidence_photo_url ? (
+                                        <div className="evidence-item">
+                                            <span>Foto Contador</span>
+                                            <img src={viewingCollection.evidence_photo_url} alt="Foto" />
+                                        </div>
+                                    ) : (
+                                        <div className="evidence-empty">Sin foto</div>
+                                    )}
+
+                                    {viewingCollection.evidence_signature_url ? (
+                                        <div className="evidence-item">
+                                            <span>Firma</span>
+                                            <img src={viewingCollection.evidence_signature_url} alt="Firma" className="sig-img" />
+                                        </div>
+                                    ) : (
+                                        <div className="evidence-empty">Sin firma</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="detail-section">
+                                <h4 className="section-header">Operaciones</h4>
+                                <button
+                                    onClick={() => handleResendReceipt(viewingCollection.id)}
+                                    className="action-btn-full secondary"
+                                    disabled={resendingId === viewingCollection.id}
+                                >
+                                    {resendingId === viewingCollection.id ? 'Enviando...' : '📧 Reenviar Recibo por Correo'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style dangerouslySetInnerHTML={{
                 __html: `
-        .collections-page { padding: 20px; max-width: 1400px; margin: 0 auto; color: white; }
+        .collections-page { padding: 20px; max-width: 1400px; margin: 0 auto; color: white; padding-bottom: 80px; }
+        
+        /* --- NEW MODAL & ACTION STYLES --- */
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .action-card { 
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; padding: 15px; cursor: pointer; transition: 0.2s; 
+            min-height: 160px; display: flex; flex-direction: column;
+        }
+        .action-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.3); }
+        
+        .action-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-dim); }
+        .file-controls { display: flex; gap: 8px; }
+        .control-btn { background: rgba(0,0,0,0.3); border: none; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; }
+        .control-btn.danger { color: #f87171; }
+
+        .action-placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-dim); }
+        .preview-container { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 8px; background: rgba(0,0,0,0.2); }
+        .photo-preview-compact { width: 100%; height: 100px; object-fit: contain; }
+        .sig-preview-compact { width: 100%; height: 80px; object-fit: contain; filter: invert(1); }
+
+        /* Sub Modals */
+        .sub-modal { z-index: 2000; background: rgba(0,0,0,0.85); }
+        .compact-modal { width: 90%; max-width: 500px; padding: 25px; }
+        .photo-drop-zone { 
+            border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; 
+            height: 250px; display: flex; align-items: center; justify-content: center; 
+            margin: 20px 0; cursor: pointer; background: rgba(0,0,0,0.2);
+        }
+        .drop-placeholder { text-align: center; color: var(--text-dim); }
+        .modal-preview-img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+        .sig-canvas-large-wrapper { background: white; border-radius: 12px; overflow: hidden; height: 300px; margin: 20px 0; }
+        .sig-canvas-large { width: 100%; height: 100%; display: block; }
+        .center { justify-content: center; }
+
+        /* Detail Modal Styles */
+        .modal-body-scrolled { max-height: 70vh; overflow-y: auto; padding-right: 5px; }
+        .detail-section { margin-bottom: 20px; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+        .label { color: var(--text-dim); }
+        .val { font-weight: 500; }
+        .val.money { color: var(--text-light); }
+        .val.commission { color: #f87171; }
+        .val.profit { color: var(--primary-color); font-weight: bold; }
+        .highlight-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .divider-dash { border-top: 1px dashed rgba(255,255,255,0.1); margin: 10px 0; }
+        .section-header { margin: 0 0 10px 0; color: var(--text-dim); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .evidence-grid-view { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .evidence-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; text-align: center; }
+        .evidence-item span { display: block; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-dim); }
+        .evidence-item img { max-width: 100%; max-height: 150px; border-radius: 4px; }
+        .evidence-item .sig-img { background: white; padding: 5px; }
+        .action-btn-full { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .action-btn-full.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
+        .action-btn-full.secondary:hover { background: rgba(255,255,255,0.15); border-color: white; }
+
+        /* --- EXISTING LAYOUT --- */
         .page-header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
         .header-left { display: flex; align-items: center; gap: 16px; }
         .back-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: white; transition: all 0.2s; }
         .back-btn:hover { background: var(--primary-color); color: black; }
         .page-header h1 { margin: 0; font-size: 1.8rem; }
         .subtitle { color: var(--text-dim); margin: 4px 0 0 0; font-size: 0.9rem; }
-
+        
         .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 24px; }
-        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
 
-        .panel { border-radius: 16px; overflow: hidden; height: fit-content; }
-        .panel-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .glass { background: #161b22; border: 1px solid rgba(48,54,61,0.5); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .glass-hover { background: rgba(255,255,255,0.02); border: 1px solid transparent; border-radius: 8px; transition: all 0.2s; }
+        .glass-hover:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); transform: translateY(-2px); }
+
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .panel-header h3 { margin: 0; font-size: 1.1rem; }
-        .badge { background: var(--primary-color); color: black; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem; }
+        .badge { background: rgba(16, 185, 129, 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 
-        .scrollable-list { max-height: 600px; overflow-y: auto; padding: 10px; }
-        .machine-item { padding: 16px; margin-bottom: 8px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; border: 1px solid transparent; }
-        .glass-hover:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); }
-        
-        .search-box-container { padding: 0 10px 10px 10px; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .search-input { 
-            width: 100%; box-sizing: border-box; 
-            padding: 10px 10px 10px 36px !important; 
-            background: rgba(0,0,0,0.2) !important; 
-            border: none !important; 
-            font-size: 0.9rem !important; 
-        }
-        .search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%) translateY(-5px); color: var(--text-dim); }
-        .empty-search-state { padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.9rem; }
+        .search-box-container { margin-bottom: 15px; position: relative; }
+        .search-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px 10px 10px 35px; border-radius: 8px; color: white; box-sizing: border-box; }
+        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
 
-        .m-info h4 { margin: 0 0 4px 0; font-size: 1rem; }
+        .scrollable-list { max-height: 600px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 8px; }
+        .machine-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; cursor: default; }
+        .m-info h4 { margin: 0 0 4px 0; font-size: 0.95rem; }
         .sub-text { margin: 0; font-size: 0.8rem; color: var(--text-dim); }
+        .action-btn-icon { background: rgba(16, 185, 129, 0.1); color: var(--primary-color); border: none; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .action-btn-icon:hover { background: var(--primary-color); color: black; }
+        .empty-search-state { text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.9rem; }
+
+        .table-responsive { overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .history-table th { text-align: left; padding: 12px; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .history-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .amount { font-family: 'SF Mono', monospace; font-weight: 600; }
+        .commission { color: #f87171; }
+        .profit { color: var(--primary-color); }
+        .delete-btn-mini { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 6px; border-radius: 4px; opacity: 0.6; transition: 0.2s; }
+        .delete-btn-mini:hover { background: rgba(220, 38, 38, 0.2); color: #ef4444; opacity: 1; }
+        .view-btn-mini { background: transparent; border: none; color: var(--primary-color); cursor: pointer; padding: 6px; border-radius: 4px; margin-right: 5px; opacity: 0.8; transition: 0.2s; }
+        .view-btn-mini:hover { background: rgba(16, 185, 129, 0.1); opacity: 1; }
+        .empty-cell { text-align: center; color: var(--text-dim); padding: 30px; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
+        .collection-modal { padding: 0; }
+        .modal-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; }
+        .close-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
         
-        .action-btn { background: var(--primary-color); color: black; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; }
-        .action-btn-icon { 
-            background: var(--primary-color);
-            color: black; 
-            border: none; 
-            width: 40px; height: 40px; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-        }
-        .action-btn-icon:hover { transform: scale(1.1); background: #65a30d; }
-
-        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .history-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-
-        .delete-btn-mini { 
-            background: rgba(248, 81, 73, 0.1); 
-            border: 1px solid rgba(248, 81, 73, 0.2); 
-            color: #f87171; 
-            cursor: pointer; 
-            padding: 6px; 
-            border-radius: 6px; 
-            transition: all 0.2s; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
-        .delete-btn-mini:hover { background: #f87171; color: white; }
-        .history-table th { text-align: left; padding: 16px; color: var(--text-dim); font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .history-table td { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.95rem; }
-        .amount { font-family: monospace; font-weight: 600; }
-        .amount.profit { color: var(--primary-color); }
-        .amount.commission { color: #f87171; }
-        .empty-cell { text-align: center; color: var(--text-dim); padding: 40px; }
-
+        .modal-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 25px; }
+        @media (max-width: 768px) { .modal-body-grid { grid-template-columns: 1fr; } }
         
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000; padding: 20px;
-        }
-
-        /* Modal Specifics */
-
-        /* Modal & Form Styling Updates */
-        .collection-modal { 
-            max-width: 550px; 
-            width: 95%;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 25px;
-            background: #161b22; 
-            border: 1px solid rgba(48, 54, 61, 0.8);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-        }
-
-        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
-        .modal-header h3 { margin: 0; font-size: 1.25rem; color: white; line-height: 1.3; }
-        .close-btn { background: none; border: none; color: var(--text-dim); font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s; }
-        .close-btn:hover { color: white; }
+        .form-section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-color); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 15px; font-weight: 700; }
+        .mt-4 { margin-top: 25px; }
         
-        /* KPI Summary Grid */
-        .kpi-summary { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; margin-bottom: 30px; }
-        .kpi-box { 
-            background: rgba(13, 17, 23, 0.6); 
-            padding: 12px 10px; 
-            border-radius: 10px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .kpi-box.highlight { 
-            background: rgba(16, 185, 129, 0.08); 
-            border: 1px solid rgba(16, 185, 129, 0.2); 
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
-        }
-        .arg-red { color: #f87171; }
+        .input-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .input-group label { font-size: 0.9rem; color: var(--text-dim); }
+        .input-group input, .input-group select { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; color: white; font-size: 1rem; }
+        .input-group input:focus { border-color: var(--primary-color); outline: none; }
+        .money-input { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); }
+
+        .commission-control { display: flex; align-items: center; gap: 10px; }
+        .commission-control input { width: 80px; }
+        .commission-value { color: #f87171; font-weight: bold; }
+
+        .days-selector { display: flex; gap: 8px; }
+        .days-selector button { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid transparent; color: var(--text-dim); padding: 8px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .days-selector button.active { background: var(--primary-color); color: black; font-weight: bold; }
+        .custom-days { width: 60px !important; text-align: center; }
+
+        .modal-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; }
+        .profit-summary { display: flex; flex-direction: column; align-items: flex-start; }
+        .profit-summary .label { font-size: 0.8rem; color: var(--text-dim); }
+        .profit-summary .highlight { font-size: 1.4rem; font-weight: bold; color: var(--primary-color); }
         
-        /* Form Layout */
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-        .compact-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
+        .modal-actions { display: flex; gap: 12px; }
+        .btn-primary { background: var(--primary-color); color: black; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover:not(:disabled) { box-shadow: 0 4px 12px var(--primary-glow); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.05); }
         
-        .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 0; }
-        .input-group label { margin: 0; font-size: 0.85rem; color: var(--text-dim); font-weight: 500; }
-        
-        /* Dark Theme Inputs */
-        input[type="text"],
-        input[type="number"],
-        input[type="date"],
-        .custom-days {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border-color);
-            color: white;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            width: 100%;
-            transition: all 0.2s ease;
-            font-family: inherit;
-            box-sizing: border-box; /* Fix sizing issues */
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: rgba(0, 0, 0, 0.4);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-        }
+        .full-width { width: 100%; }
 
-        /* Money Input Special Styling */
-        .money-input { 
-            font-size: 1.2rem !important; 
-            font-weight: 700; 
-            color: var(--primary-color) !important; 
-            background: rgba(16, 185, 129, 0.05) !important;
-            border-color: rgba(16, 185, 129, 0.3) !important;
-        }
-
-        /* Read-only Info Display */
-        .info-display { 
-            background: rgba(255,255,255,0.03); 
-            padding: 10px 14px; 
-            border-radius: 8px; 
-            color: var(--text-dim); 
-            font-size: 0.95rem; 
-            border: 1px dashed rgba(255,255,255,0.1);
-            display: flex; align-items: center;
-            height: 42px; /* Accessbility to match inputs */
-            box-sizing: border-box;
-        }
-
-        /* Calculation Preview Box */
-        .calc-preview { 
-            background: rgba(0,0,0,0.25); 
-            padding: 20px; 
-            border-radius: 12px; 
-            margin-top: 25px; 
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .calc-preview .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-dim); }
-        .calc-preview .row:last-child { margin-bottom: 0; }
-        .calc-preview .row.total { 
-            margin-top: 16px; 
-            padding-top: 16px; 
-            border-top: 1px solid rgba(255,255,255,0.1); 
-            font-size: 1.2rem; 
-            color: white; 
-            font-weight: 700; 
-        }
-
-        /* Section Titles */
-        .form-section-title {
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            letter-spacing: 1.2px; 
-            color: var(--primary-color);
-            margin: 25px 0 15px 0; 
-            font-weight: 700;
-            display: flex; align-items: center; gap: 8px;
-            opacity: 0.9;
-        }
-        .form-section-title::after {
-            content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08);
-        }
-        .mt-4 { margin-top: 0; } /* Resetting utility since we used specific spacing */
-
-        /* Days Selector */
-        .days-selector { display: grid; grid-template-columns: repeat(4, 1fr) 1.2fr; gap: 10px; width: 100%; }
-        .days-selector button { 
-            width: 100%;
-            min-width: unset;
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid rgba(255,255,255,0.1); 
-            color: var(--text-dim); 
-            padding: 10px 0; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-        .days-selector button:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-        .days-selector button.active { 
-            background: var(--primary-color); 
-            color: black; 
-            font-weight: 600; 
-            border-color: var(--primary-color); 
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-        }
-        
-        .custom-days-wrapper { 
-            display: flex; align-items: center; justify-content: center; gap: 6px; 
-            background: rgba(255,255,255,0.03); 
-            padding: 0 10px; 
-            border-radius: 8px; 
-            border: 1px solid rgba(255,255,255,0.1); 
-        }
-        .custom-days { 
-            width: 35px !important; 
-            padding: 5px !important; text-align: center; 
-            background: transparent !important; border: none !important; 
-            font-weight: 600;
-        }
-        /* Hide arrows in number input */
-        .custom-days::-webkit-outer-spin-button,
-        .custom-days::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
-        /* Modal Actions */
-        .modal-actions { 
-            display: flex; gap: 16px; margin-top: 35px; padding-top: 25px; 
-            border-top: 1px solid rgba(255,255,255,0.08); 
-        }
-        .btn-secondary { 
-            background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; 
-            padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600; flex: 1;
-            transition: all 0.2s;
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.05); border-color: white; }
-        
-        .btn-primary { 
-            flex: 2; 
-            background: var(--primary-color); color: rgb(6, 43, 29);
-            border: none; padding: 12px 24px; border-radius: 10px; 
-            font-weight: 700; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-            transition: all 0.2s;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
-
-        /* Toast Styles (Keep existing) */
-        .toast-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            z-index: 9999;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            max-width: 300px;
-            cursor: pointer;
-        }
+        /* Toasts */
+        .toast-notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #333; color: white; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; transition: 0.3s; }
         .toast-notification:hover { transform: scale(1.02); }
         .toast-notification.success { background: #10b981; border-left: 4px solid #059669; }
         .toast-notification.error { background: #ef4444; border-left: 4px solid #b91c1c; }
@@ -860,7 +907,7 @@ export default function Collections() {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        `}} />
-        </div >
+            ` }} />
+        </div>
     )
 }
