@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Info, Image, Clock, CheckSquare } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Info, Image, Clock, CheckSquare, Users, Building2 } from 'lucide-react'
 
 export default function Reports() {
     const [reports, setReports] = useState([])
     const [loading, setLoading] = useState(true)
     const [selectedImage, setSelectedImage] = useState(null)
+    const [activeTab, setActiveTab] = useState('client') // 'client' | 'internal'
 
     useEffect(() => {
         fetchReports()
@@ -98,20 +99,35 @@ export default function Reports() {
                     </Link>
                     <div>
                         <h1>Reportes de Servicio</h1>
-                        <p className="subtitle">Gestión de incidencias reportadas por usuarios</p>
+                        <p className="subtitle">Gestión de incidencias</p>
                     </div>
                 </div>
             </header>
 
+            <div className="tabs-container">
+                <button
+                    className={`tab-btn ${activeTab === 'client' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('client')}
+                >
+                    <Users size={16} /> Clientes
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'internal' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('internal')}
+                >
+                    <Building2 size={16} /> Internas (Bitácora)
+                </button>
+            </div>
+
             {loading ? <p>Cargando reportes...</p> : (
                 <div className="reports-list">
-                    {reports.length === 0 ? (
+                    {reports.filter(r => (r.source || 'client') === activeTab).length === 0 ? (
                         <div className="empty-glass">
                             <CheckCircle2 size={48} className="teal" style={{ opacity: 0.5, marginBottom: 10 }} />
-                            <p>No tienes reportes pendientes. ¡Todo marcha bien!</p>
+                            <p>No hay reportes {activeTab === 'client' ? 'de clientes' : 'internos'} pendientes.</p>
                         </div>
                     ) : (
-                        reports.map(report => {
+                        reports.filter(r => (r.source || 'client') === activeTab).map(report => {
                             const config = typeConfig[report.report_type] || { color: '#888', icon: <Info /> }
 
                             return (
@@ -170,8 +186,14 @@ export default function Reports() {
                 .back-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: white; transition: all 0.2s; }
                 .back-btn:hover { background: var(--primary-color); color: black; }
                 .page-header h1 { margin: 0; font-size: 1.8rem; }
+                .page-header h1 { margin: 0; font-size: 1.8rem; }
                 .subtitle { color: var(--text-dim); margin: 4px 0 0 0; font-size: 0.9rem; }
                 
+                .tabs-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+                .tab-btn { background: transparent; border: none; color: var(--text-dim); padding: 8px 16px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 8px; transition: 0.2s; }
+                .tab-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+                .tab-btn.active { background: var(--primary-color); color: black; font-weight: 600; }
+
                 .empty-glass { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 12px; text-align: center; color: #888; }
 
                 .report-card { 

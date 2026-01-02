@@ -48,6 +48,15 @@ export default function Collections() {
         commission_percent: 0
     })
 
+    // Incident Reporting State
+    const [reportForm, setReportForm] = useState({
+        enabled: false,
+        type: 'Otro',
+        description: '',
+        remember: true
+    })
+    const [machineAlert, setMachineAlert] = useState(null)
+
     // Auto-calculate units when amount changes
     useEffect(() => {
         if (selectedMachine && newCollection.gross_amount) {
@@ -132,7 +141,7 @@ export default function Collections() {
         return date.toISOString().split('T')[0]
     }
 
-    const handleOpenModal = (machine) => {
+    const handleOpenModal = async (machine) => {
         setSelectedMachine(machine)
         const isRent = machine.contract_type === 'rent'
 
@@ -146,6 +155,26 @@ export default function Collections() {
             commission_percent: isRent ? 0 : (machine.commission_percent || 0),
             rent_amount_snapshot: isRent ? (machine.rent_amount || 0) : 0
         })
+
+        // Reset Incident Form
+        setReportForm({ enabled: false, type: 'Otro', description: '', remember: true })
+        setMachineAlert(null)
+
+        // Check for pending reports
+        try {
+            const { count } = await supabase
+                .from('reports')
+                .select('*', { count: 'exact', head: true })
+                .eq('machine_id', machine.id)
+                .in('status', ['pending', 'in_progress'])
+
+            if (count && count > 0) {
+                setMachineAlert(`⚠️ Atención: Esta máquina tiene ${count} incidencia(s) pendiente(s).`)
+            }
+        } catch (e) {
+            console.error("Error checking reports", e)
+        }
+
         setPhotoBlob(null)
         setPhotoPreview(null)
         setSignaturePreview(null)
@@ -262,6 +291,23 @@ export default function Collections() {
             }).select().single()
 
             if (error) throw error
+
+            // 4. Save Incident Report (if enabled)
+            if (reportForm.enabled) {
+                const reportStatus = reportForm.remember ? 'pending' : 'resolved'
+                const { error: reportError } = await supabase.from('reports').insert({
+                    tenant_id: selectedMachine.tenant_id,
+                    machine_id: selectedMachine.id,
+                    report_type: reportForm.type,
+                    description: reportForm.description,
+                    contact_phone: 'N/A', // Internal report
+                    source: 'internal', // New column
+                    status: reportStatus,
+                    priority: 'medium',
+                    reported_at: new Date().toISOString()
+                })
+                if (reportError) console.error("Error saving incident:", reportError)
+            }
 
             showToast('Corte registrado exitosamente!', 'success')
 
@@ -606,6 +652,64 @@ export default function Collections() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* INCIDENCIAS SECTION */}
+                                    <div className="form-section-title mt-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span>Reporte de Incidencia</span>
+                                        <label className="switch-wrapper">
+                                            <input
+                                                type="checkbox"
+                                                checked={reportForm.enabled}
+                                                onChange={e => setReportForm({ ...reportForm, enabled: e.target.checked })}
+                                            />
+                                            <span className="switch-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    {reportForm.enabled && (
+                                        <div className="incident-panel compact-panel">
+                                            <div className="input-group">
+                                                <label>Tipo de Falla</label>
+                                                <select
+                                                    value={reportForm.type}
+                                                    onChange={e => setReportForm({ ...reportForm, type: e.target.value })}
+                                                    className="dark-select"
+                                                >
+                                                    <option value="Otro">Otro</option>
+                                                    <option value="Monedero Bloqueado">Monedero Bloqueado</option>
+                                                    <option value="Base Dañada">Base Dañada</option>
+                                                    <option value="Producto Atorado">Producto Atorado</option>
+                                                    <option value="Pantalla/Software">Pantalla / Software</option>
+                                                    <option value="Limpieza">Falta Limpieza</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="input-group">
+                                                <label>Observaciones</label>
+                                                <textarea
+                                                    placeholder="Describe la incidencia o solución..."
+                                                    value={reportForm.description}
+                                                    onChange={e => setReportForm({ ...reportForm, description: e.target.value })}
+                                                    rows={2}
+                                                />
+                                            </div>
+
+                                            <label className="checkbox-row">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={reportForm.remember}
+                                                    onChange={e => setReportForm({ ...reportForm, remember: e.target.checked })}
+                                                />
+                                                <span>Recordar (Mantener Pendiente)</span>
+                                            </label>
+                                            <p className="helper-text">
+                                                {reportForm.remember
+                                                    ? "La incidencia aparecerá como Pendiente en el tablero."
+                                                    : "La incidencia se guardará como Resuelta (solo historial)."
+                                                }
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -911,6 +1015,19 @@ export default function Collections() {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+        
+        /* Switch */
+        .switch-wrapper { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch-wrapper input { opacity: 0; width: 0; height: 0; }
+        .switch-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px; }
+        .switch-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .switch-slider { background-color: var(--primary-color); }
+        input:checked + .switch-slider:before { transform: translateX(20px); background-color: black; }
+
+        .incident-panel { background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.2); padding: 15px; border-radius: 8px; margin-top: 10px; }
+        .dark-select { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; }
+        .checkbox-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; cursor: pointer; font-weight: 500; font-size: 0.9rem; }
+        .helper-text { font-size: 0.75rem; color: var(--text-dim); margin: 5px 0 0 25px; }
             ` }} />
         </div>
     )

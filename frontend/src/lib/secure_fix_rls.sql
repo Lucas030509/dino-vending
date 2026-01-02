@@ -1,25 +1,36 @@
--- FINAL PRODUCTION FIX
--- Restores security but avoids the strict blockers found earlier.
--- Replaces duplicated/complex logic with direct, functional checks.
+-- FINAL PRODUCTION FIX V2 (Includes DELETE)
+-- Restores security logic including DELETE permissions which were missing in V1.
 
 -- 1. Collections: INSERT
--- Rely on App logic & Foreign Keys. If user is logged in, they can record a collection.
--- Risk is low because they need a valid machine_id (UUID).
 DROP POLICY IF EXISTS "Users can insert relevant collections" ON collections;
-DROP POLICY IF EXISTS "Debug Insert Collections" ON collections; -- remove debug
-DROP POLICY IF EXISTS "Secure Insert Collections" ON collections;
-
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON collections;
 CREATE POLICY "Enable insert for authenticated users" 
 ON collections FOR INSERT 
 TO authenticated 
 WITH CHECK (true);
 
--- 2. Machines: UPDATE
+-- 2. Collections: DELETE
+-- Allow users to delete collections if they have access to the related machine.
+-- This relies on the robust 'machines' select policy.
+DROP POLICY IF EXISTS "Users can delete relevant collections" ON collections;
+DROP POLICY IF EXISTS "Enable delete for authenticated users" ON collections;
+
+CREATE POLICY "Enable delete for authenticated users"
+ON collections FOR DELETE
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM machines 
+        WHERE id = collections.machine_id
+    )
+    OR
+    (SELECT role FROM profiles WHERE id = auth.uid()) = 'super_admin'
+);
+
+-- 3. Machines: UPDATE
 -- Critical for Triggers (updating last_visit_date).
--- We use a direct subquery to avoid function caching issues.
 DROP POLICY IF EXISTS "Users can update relevant machines" ON machines;
-DROP POLICY IF EXISTS "Debug Update Machines" ON machines; -- remove debug
-DROP POLICY IF EXISTS "Secure Update Machines" ON machines;
+DROP POLICY IF EXISTS "Enable update for tenant owners" ON machines;
 
 CREATE POLICY "Enable update for tenant owners" 
 ON machines FOR UPDATE
