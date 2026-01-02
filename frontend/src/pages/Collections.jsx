@@ -40,7 +40,8 @@ export default function Collections() {
     // Form State for New Collection
     const [newCollection, setNewCollection] = useState({
         gross_amount: '',
-        collection_date: new Date().toLocaleDateString('en-CA'), // Returns YYYY-MM-DD in Local Time
+        // Force Mexico City Timezone (YYYY-MM-DD)
+        collection_date: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Mexico_City' }).format(new Date()),
         next_refill_days: 15, // Default estimate
         notes: '',
         units_sold: 0,
