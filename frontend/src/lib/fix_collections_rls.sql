@@ -44,7 +44,7 @@ USING (
     is_super_admin()
 );
 
--- INSERT
+
 DROP POLICY IF EXISTS "Users can insert relevant collections" ON collections;
 CREATE POLICY "Users can insert relevant collections" 
 ON collections FOR INSERT 
@@ -53,8 +53,8 @@ WITH CHECK (
     (
         EXISTS (
             SELECT 1 FROM machines 
-            WHERE id = collections.machine_id 
-            AND tenant_id = collections.tenant_id
+            WHERE id = collections.machine_id
+            -- Removing explicit tenant_id check here to rely solely on machine visibility (machines RLS)
         )
     )
     OR 
@@ -70,8 +70,7 @@ USING (
     (
         EXISTS (
             SELECT 1 FROM machines 
-            WHERE id = collections.machine_id 
-            AND tenant_id = collections.tenant_id
+            WHERE id = collections.machine_id
         )
     )
     OR 
@@ -81,8 +80,7 @@ WITH CHECK (
     (
         EXISTS (
             SELECT 1 FROM machines 
-            WHERE id = collections.machine_id 
-            AND tenant_id = collections.tenant_id
+            WHERE id = collections.machine_id
         )
     )
     OR 
@@ -101,6 +99,22 @@ USING (
             WHERE id = collections.machine_id
         )
     )
+    OR 
+    is_super_admin()
+);
+
+-- 4. ASEGURAR PERMISOS PARA UPDATE DE MACHINES (Crucial si hay triggers)
+DROP POLICY IF EXISTS "Users can update relevant machines" ON machines;
+CREATE POLICY "Users can update relevant machines" 
+ON machines FOR UPDATE
+TO authenticated 
+USING (
+    tenant_id = get_my_tenant_id() 
+    OR 
+    is_super_admin()
+)
+WITH CHECK (
+    tenant_id = get_my_tenant_id() 
     OR 
     is_super_admin()
 );
