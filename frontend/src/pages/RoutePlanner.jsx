@@ -63,11 +63,11 @@ export default function RoutePlanner() {
     const fetchRoutes = async () => {
         setRoutesLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            // Updated: Rely on RLS policies to filter by tenant. 
+            // Previous explicit check failed if metadata was missing.
             const { data, error } = await supabase
                 .from('routes')
                 .select('*, route_stops(count)')
-                .eq('tenant_id', user.user_metadata?.tenant_id) // Assumes simplified check for now
                 .order('scheduled_date', { ascending: false })
 
             if (data) setSavedRoutes(data)
@@ -139,9 +139,23 @@ export default function RoutePlanner() {
         try {
             const { data: { user } } = await supabase.auth.getUser()
 
-            // Get tenant (simplified logic re-using existing pattern elsewhere usually)
-            // Ideally we store tenant_id in context, but let's grab from metadata or profile
+            // Robust Tenant ID Fetch
             let tenantId = user.user_metadata?.tenant_id
+
+            if (!tenantId) {
+                // Fallback: fetch from profile if metadata is empty (fix for legacy/client users)
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('tenant_id')
+                    .eq('id', user.id)
+                    .single()
+
+                if (profile?.tenant_id) {
+                    tenantId = profile.tenant_id
+                } else {
+                    throw new Error("No se pudo identificar tu organización (Tenant ID missing).")
+                }
+            }
 
             const { data: route, error: routeError } = await supabase.from('routes').insert({
                 driver_id: user.id,
