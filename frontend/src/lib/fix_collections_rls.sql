@@ -50,7 +50,13 @@ CREATE POLICY "Users can insert relevant collections"
 ON collections FOR INSERT 
 TO authenticated 
 WITH CHECK (
-    tenant_id = get_my_tenant_id() 
+    (
+        EXISTS (
+            SELECT 1 FROM machines 
+            WHERE id = collections.machine_id 
+            AND tenant_id = collections.tenant_id
+        )
+    )
     OR 
     is_super_admin()
 );
@@ -61,12 +67,24 @@ CREATE POLICY "Users can update relevant collections"
 ON collections FOR UPDATE
 TO authenticated 
 USING (
-    tenant_id = get_my_tenant_id() 
+    (
+        EXISTS (
+            SELECT 1 FROM machines 
+            WHERE id = collections.machine_id 
+            AND tenant_id = collections.tenant_id
+        )
+    )
     OR 
     is_super_admin()
 )
 WITH CHECK (
-    tenant_id = get_my_tenant_id() 
+    (
+        EXISTS (
+            SELECT 1 FROM machines 
+            WHERE id = collections.machine_id 
+            AND tenant_id = collections.tenant_id
+        )
+    )
     OR 
     is_super_admin()
 );
@@ -77,7 +95,12 @@ CREATE POLICY "Users can delete relevant collections"
 ON collections FOR DELETE
 TO authenticated 
 USING (
-    tenant_id = get_my_tenant_id() 
+    (
+        EXISTS (
+            SELECT 1 FROM machines 
+            WHERE id = collections.machine_id
+        )
+    )
     OR 
     is_super_admin()
 );
