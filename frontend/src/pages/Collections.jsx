@@ -218,6 +218,10 @@ export default function Collections() {
 
             const { data: { user } } = await supabase.auth.getUser()
 
+            if (!user) {
+                throw new Error("No se pudo identificar al usuario. Por favor inicia sesión nuevamente.")
+            }
+
             // --- EVIDENCE UPLOAD ---
             let photoUrl = null
             let signatureUrl = null
