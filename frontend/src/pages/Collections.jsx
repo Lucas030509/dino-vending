@@ -37,9 +37,10 @@ export default function Collections() {
     const [resendingId, setResendingId] = useState(null)
 
     // Form State for New Collection
+    // Form State for New Collection
     const [newCollection, setNewCollection] = useState({
         gross_amount: '',
-        collection_date: new Date().toISOString().split('T')[0],
+        collection_date: new Date().toLocaleDateString('en-CA'), // Returns YYYY-MM-DD in Local Time
         next_refill_days: 15, // Default estimate
         notes: '',
         units_sold: 0,
@@ -453,7 +454,11 @@ export default function Collections() {
                             <tbody>
                                 {collections.map(col => (
                                     <tr key={col.id}>
-                                        <td>{new Date(col.collection_date).toLocaleDateString()}</td>
+                                        <td>{(() => {
+                                            if (!col.collection_date) return '-'
+                                            const [y, m, d] = col.collection_date.split('-')
+                                            return `${d}/${m}/${y}`
+                                        })()}</td>
                                         <td>{col.machines?.location_name || 'Desconocida'}</td>
                                         <td className="amount">${col.gross_amount}</td>
                                         <td className="amount commission">-${col.commission_amount}</td>
@@ -801,7 +806,11 @@ export default function Collections() {
                                 </div>
                                 <div className="detail-row">
                                     <span className="label">Fecha:</span>
-                                    <span className="val">{new Date(viewingCollection.collection_date).toLocaleDateString()}</span>
+                                    <span className="val">{(() => {
+                                        if (!viewingCollection.collection_date) return '-'
+                                        const [y, m, d] = viewingCollection.collection_date.split('-')
+                                        return `${d}/${m}/${y}`
+                                    })()}</span>
                                 </div>
                             </div>
 
