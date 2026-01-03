@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser, Eye } from 'lucide-react'
 import SignatureCanvas from 'react-signature-canvas'
+import { getMexicoCityDate, formatDateDDMMYYYY } from '../utils/formatters'
+import { CollectionModal } from '../components/collections/CollectionModal'
+import './Collections.css'
 
 export default function Collections() {
     const [machines, setMachines] = useState([])
@@ -41,7 +44,7 @@ export default function Collections() {
     const [newCollection, setNewCollection] = useState({
         gross_amount: '',
         // Force Mexico City Timezone (YYYY-MM-DD)
-        collection_date: new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Mexico_City' }).format(new Date()),
+        collection_date: getMexicoCityDate(),
         next_refill_days: 15, // Default estimate
         notes: '',
         units_sold: 0,
@@ -456,11 +459,7 @@ export default function Collections() {
                             <tbody>
                                 {collections.map(col => (
                                     <tr key={col.id}>
-                                        <td>{(() => {
-                                            if (!col.collection_date) return '-'
-                                            const [y, m, d] = col.collection_date.split('T')[0].split('-')
-                                            return `${d}/${m}/${y}`
-                                        })()}</td>
+                                        <td>{formatDateDDMMYYYY(col.collection_date)}</td>
                                         <td>{col.machines?.location_name || 'Desconocida'}</td>
                                         <td className="amount">${col.gross_amount}</td>
                                         <td className="amount commission">-${col.commission_amount}</td>
@@ -490,556 +489,167 @@ export default function Collections() {
 
             {/* Modal: Register Collection */}
             {showModal && selectedMachine && (
-                <div className="modal-overlay">
-                    <div className="glass modal-content collection-modal">
-                        <div className="modal-header">
-                            <h3>Registrar Corte: {selectedMachine.location_name}</h3>
-                            <button className="close-btn" onClick={() => setShowModal(false)}>✕</button>
+                <CollectionModal
+                    machine={selectedMachine}
+                    onClose={() => setShowModal(false)}
+                    onSubmit={handleRegisterCollection}
+                    newCollection={newCollection}
+                    setNewCollection={setNewCollection}
+                    reportForm={reportForm}
+                    setReportForm={setReportForm}
+                    machineAlert={machineAlert}
+                    commissionAmount={commissionAmount}
+                    netProfit={netProfit}
+                    signatureRef={signatureRef}
+                    clearSignature={clearSignature}
+                    signaturePreview={signaturePreview}
+                    setSignaturePreview={setSignaturePreview}
+                    photoPreview={photoPreview}
+                    setPhotoPreview={setPhotoPreview}
+                    showPhotoModal={showPhotoModal}
+                    setShowPhotoModal={setShowPhotoModal}
+                    showSignatureModal={showSignatureModal}
+                    setShowSignatureModal={setShowSignatureModal}
+                    photoFile={photoFile}
+                    setPhotoFile={setPhotoFile}
+                    isSubmitting={isSubmitting}
+                />
+            )}
+            {/* --- MODAL FOTO --- */}
+            {
+                showPhotoModal && (
+                    <div className="modal-overlay sub-modal">
+                        <div className="glass modal-content compact-modal">
+                            <h3>Subir Evidencia (Contador)</h3>
+                            <div className="photo-drop-zone" onClick={() => document.getElementById('modal-upload').click()}>
+                                {photoPreview ? (
+                                    <img src={photoPreview} alt="Preview" className="modal-preview-img" />
+                                ) : (
+                                    <div className="drop-placeholder">
+                                        <Camera size={48} />
+                                        <p>Toca para seleccionar o tomar foto</p>
+                                    </div>
+                                )}
+                            </div>
+                            <input
+                                type="file"
+                                id="modal-upload"
+                                accept="image/*"
+                                capture="environment"
+                                style={{ display: 'none' }}
+                                onChange={handlePhotoSelect}
+                            />
+                            <div className="modal-actions">
+                                <button onClick={() => setShowPhotoModal(false)} className="btn-secondary">Cancelar</button>
+                                <button onClick={() => setShowPhotoModal(false)} disabled={!photoBlob} className="btn-primary">Confirmar</button>
+                            </div>
                         </div>
+                    </div>
+                )
+            }
 
-                        <form onSubmit={handleRegisterCollection}>
-                            <div className="modal-body-grid">
-                                {/* Columna Izquierda: Datos Financieros */}
-                                <div className="modal-column">
-                                    <div className="form-section-title">Datos del Corte</div>
+            {/* --- MODAL FIRMA --- */}
+            {
+                showSignatureModal && (
+                    <div className="modal-overlay sub-modal">
+                        <div className="glass modal-content compact-modal">
+                            <h3>Firma de Conformidad</h3>
+                            <div className="sig-canvas-large-wrapper">
+                                <SignatureCanvas
+                                    ref={signatureRef}
+                                    penColor="black"
+                                    canvasProps={{ className: 'sig-canvas-large' }}
+                                    backgroundColor="white"
+                                />
+                            </div>
+                            <div className="modal-actions center">
+                                <button onClick={clearSignature} className="btn-secondary">Limpiar</button>
+                                <button onClick={() => setShowSignatureModal(false)} className="btn-secondary">Cancelar</button>
+                                <button onClick={handleConfirmSignature} className="btn-primary">Aceptar Firma</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
-                                    <div className="input-group">
-                                        <label>Fecha del Corte</label>
-                                        <input
-                                            type="date"
-                                            value={newCollection.collection_date}
-                                            onChange={e => setNewCollection({ ...newCollection, collection_date: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="input-group">
-                                        <label>Monto Recolectado ($)</label>
-                                        <input
-                                            type="number"
-                                            step="0.50"
-                                            placeholder="0.00"
-                                            value={newCollection.gross_amount}
-                                            onChange={e => setNewCollection({ ...newCollection, gross_amount: e.target.value })}
-                                            required
-                                            className="money-input"
-                                        />
-                                    </div>
-
-                                    {selectedMachine.contract_type === 'rent' ? (
-                                        <div className="input-group">
-                                            <label>Esquema de Pago</label>
-                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                                <DollarSign size={14} style={{ display: 'inline', marginRight: 5 }} />
-                                                Modelo de Renta Fija
-                                                <div style={{ color: 'white', marginTop: 4, fontWeight: 'bold' }}>
-                                                    ${selectedMachine.rent_amount} / {selectedMachine.rent_periodicity}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="input-group">
-                                            <label>Comisión del Lugar (%)</label>
-                                            <div className="commission-control">
-                                                <input
-                                                    type="number"
-                                                    min="0" max="100" step="0.5"
-                                                    value={newCollection.commission_percent}
-                                                    onChange={e => setNewCollection({ ...newCollection, commission_percent: parseFloat(e.target.value) })}
-                                                    required
-                                                />
-                                                <div className="commission-value">
-                                                    = ${commissionAmount.toFixed(2)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="form-section-title mt-4">Próxima Visita</div>
-                                    <div className="input-group">
-                                        <div className="days-selector compact">
-                                            {[7, 15, 30].map(days => (
-                                                <button
-                                                    type="button"
-                                                    key={days}
-                                                    className={newCollection.next_refill_days == days ? 'active' : ''}
-                                                    onClick={() => setNewCollection({ ...newCollection, next_refill_days: days })}
-                                                >
-                                                    {days}d
-                                                </button>
-                                            ))}
-                                            <div className="custom-days-wrapper">
-                                                <input
-                                                    type="number"
-                                                    className="custom-days"
-                                                    placeholder="#"
-                                                    value={newCollection.next_refill_days}
-                                                    onChange={e => setNewCollection({ ...newCollection, next_refill_days: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Costos Operativos (Colapsables o discretos) */}
-                                    <div className="details-disclosure">
-                                        <details>
-                                            <summary>Detalles Operativos (Costos)</summary>
-                                            <div className="form-grid compact-grid mt-2">
-                                                <div className="input-group">
-                                                    <label>Unidades Vendidas</label>
-                                                    <input
-                                                        type="number"
-                                                        value={newCollection.units_sold}
-                                                        onChange={e => setNewCollection({ ...newCollection, units_sold: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="input-group">
-                                                    <label>Costo Unitario ($)</label>
-                                                    <input
-                                                        type="number" step="0.10"
-                                                        value={newCollection.cost_capsule}
-                                                        onChange={e => setNewCollection({ ...newCollection, cost_capsule: e.target.value })}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </details>
-                                    </div>
-                                </div>
-
-                                {/* Columna Derecha: Evidencias (Action Buttons) */}
-                                <div className="modal-column right-col">
-                                    <div className="form-section-title">Evidencias</div>
-
-                                    <div className="actions-grid">
-                                        {/* Photo Action */}
-                                        <div className="action-card" onClick={() => !photoPreview && setShowPhotoModal(true)}>
-                                            <div className="action-header">
-                                                <label>Foto Contador</label>
-                                                {photoPreview && (
-                                                    <div className="file-controls">
-                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setShowPhotoModal(true); }} className="control-btn">Cambiar</button>
-                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); setPhotoBlob(null); }} className="control-btn danger">Borrar</button>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {photoPreview ? (
-                                                <div className="preview-container">
-                                                    <img src={photoPreview} alt="Evidencia" className="photo-preview-compact" />
-                                                </div>
-                                            ) : (
-                                                <div className="action-placeholder">
-                                                    <Camera size={32} className="action-icon" />
-                                                    <span>Tomar Foto</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Signature Action */}
-                                        <div className="action-card" onClick={() => !signaturePreview && setShowSignatureModal(true)}>
-                                            <div className="action-header">
-                                                <label>Firma Conformidad</label>
-                                                {signaturePreview && (
-                                                    <div className="file-controls">
-                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setShowSignatureModal(true); }} className="control-btn">Re-Firmar</button>
-                                                        <button type="button" onClick={(e) => { e.stopPropagation(); setSignaturePreview(null); signatureRef.current?.clear(); }} className="control-btn danger">Borrar</button>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {signaturePreview ? (
-                                                <div className="preview-container">
-                                                    <img src={signaturePreview} alt="Firma" className="sig-preview-compact" />
-                                                </div>
-                                            ) : (
-                                                <div className="action-placeholder">
-                                                    <Eraser size={32} className="action-icon" />
-                                                    <span>Firmar Recibo</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* INCIDENCIAS SECTION */}
-                                    <div className="form-section-title mt-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <span>Reporte de Incidencia</span>
-                                        <label className="switch-wrapper">
-                                            <input
-                                                type="checkbox"
-                                                checked={reportForm.enabled}
-                                                onChange={e => setReportForm({ ...reportForm, enabled: e.target.checked })}
-                                            />
-                                            <span className="switch-slider"></span>
-                                        </label>
-                                    </div>
-
-                                    {reportForm.enabled && (
-                                        <div className="incident-panel compact-panel">
-                                            <div className="input-group">
-                                                <label>Tipo de Falla</label>
-                                                <select
-                                                    value={reportForm.type}
-                                                    onChange={e => setReportForm({ ...reportForm, type: e.target.value })}
-                                                    className="dark-select"
-                                                >
-                                                    <option value="Otro">Otro</option>
-                                                    <option value="Monedero Bloqueado">Monedero Bloqueado</option>
-                                                    <option value="Base Dañada">Base Dañada</option>
-                                                    <option value="Producto Atorado">Producto Atorado</option>
-                                                    <option value="Pantalla/Software">Pantalla / Software</option>
-                                                    <option value="Limpieza">Falta Limpieza</option>
-                                                </select>
-                                            </div>
-
-                                            <div className="input-group">
-                                                <label>Observaciones</label>
-                                                <textarea
-                                                    placeholder="Describe la incidencia o solución..."
-                                                    value={reportForm.description}
-                                                    onChange={e => setReportForm({ ...reportForm, description: e.target.value })}
-                                                    rows={2}
-                                                />
-                                            </div>
-
-                                            <label className="checkbox-row">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={reportForm.remember}
-                                                    onChange={e => setReportForm({ ...reportForm, remember: e.target.checked })}
-                                                />
-                                                <span>Recordar (Mantener Pendiente)</span>
-                                            </label>
-                                            <p className="helper-text">
-                                                {reportForm.remember
-                                                    ? "La incidencia aparecerá como Pendiente en el tablero."
-                                                    : "La incidencia se guardará como Resuelta (solo historial)."
-                                                }
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+            {/* --- MODAL DETALLE HISTORIAL --- */}
+            {
+                viewingCollection && (
+                    <div className="modal-overlay">
+                        <div className="glass modal-content collection-modal detail-mode">
+                            <div className="modal-header">
+                                <h3>Detalle de Corte</h3>
+                                <button className="close-btn" onClick={() => setViewingCollection(null)}>✕</button>
                             </div>
 
-                            <div className="modal-footer">
-                                <div className="profit-summary">
-                                    <span className="label">A Pagar al Cliente:</span>
-                                    <span className="val highlight">${commissionAmount.toFixed(2)}</span>
+                            <div className="modal-body-scrolled">
+                                <div className="detail-section">
+                                    <div className="detail-row">
+                                        <span className="label">Ubicación:</span>
+                                        <span className="val">{viewingCollection.machines?.location_name}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="label">Fecha:</span>
+                                        <span className="val">{formatDateDDMMYYYY(viewingCollection.collection_date)}</span>
+                                    </div>
                                 </div>
-                                <div className="modal-actions">
-                                    <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
-                                    <button type="submit" className="btn-primary full-width" disabled={isSubmitting}>
-                                        {isSubmitting ? 'Procesando...' : 'Guardar Corte'}
+
+                                <div className="detail-section highlight-box">
+                                    <div className="detail-row">
+                                        <span className="label">Monto Recolectado:</span>
+                                        <span className="val money">${parseFloat(viewingCollection.gross_amount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="label">Comisión ({viewingCollection.commission_percent_snapshot}%):</span>
+                                        <span className="val commission">-${parseFloat(viewingCollection.commission_amount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="divider-dash"></div>
+                                    <div className="detail-row total">
+                                        <span className="label">Ganancia Neta:</span>
+                                        <span className="val profit">${(parseFloat(viewingCollection.profit_amount) || parseFloat(viewingCollection.net_revenue)).toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="detail-section">
+                                    <h4 className="section-header">Evidencias</h4>
+                                    <div className="evidence-grid-view">
+                                        {viewingCollection.evidence_photo_url ? (
+                                            <div className="evidence-item">
+                                                <span>Foto Contador</span>
+                                                <img src={viewingCollection.evidence_photo_url} alt="Foto" />
+                                            </div>
+                                        ) : (
+                                            <div className="evidence-empty">Sin foto</div>
+                                        )}
+
+                                        {viewingCollection.evidence_signature_url ? (
+                                            <div className="evidence-item">
+                                                <span>Firma</span>
+                                                <img src={viewingCollection.evidence_signature_url} alt="Firma" className="sig-img" />
+                                            </div>
+                                        ) : (
+                                            <div className="evidence-empty">Sin firma</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="detail-section">
+                                    <h4 className="section-header">Operaciones</h4>
+                                    <button
+                                        onClick={() => handleResendReceipt(viewingCollection.id)}
+                                        className="action-btn-full secondary"
+                                        disabled={resendingId === viewingCollection.id}
+                                    >
+                                        {resendingId === viewingCollection.id ? 'Enviando...' : '📧 Reenviar Recibo por Correo'}
                                     </button>
                                 </div>
                             </div>
-                        </form>
-                    </div >
-                </div >
-            )
+                        </div>
+                    </div>
+                )
             }
 
-            {/* --- MODAL FOTO --- */}
-            {showPhotoModal && (
-                <div className="modal-overlay sub-modal">
-                    <div className="glass modal-content compact-modal">
-                        <h3>Subir Evidencia (Contador)</h3>
-                        <div className="photo-drop-zone" onClick={() => document.getElementById('modal-upload').click()}>
-                            {photoPreview ? (
-                                <img src={photoPreview} alt="Preview" className="modal-preview-img" />
-                            ) : (
-                                <div className="drop-placeholder">
-                                    <Camera size={48} />
-                                    <p>Toca para seleccionar o tomar foto</p>
-                                </div>
-                            )}
-                        </div>
-                        <input
-                            type="file"
-                            id="modal-upload"
-                            accept="image/*"
-                            capture="environment"
-                            style={{ display: 'none' }}
-                            onChange={handlePhotoSelect}
-                        />
-                        <div className="modal-actions">
-                            <button onClick={() => setShowPhotoModal(false)} className="btn-secondary">Cancelar</button>
-                            <button onClick={() => setShowPhotoModal(false)} disabled={!photoBlob} className="btn-primary">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* --- MODAL FIRMA --- */}
-            {showSignatureModal && (
-                <div className="modal-overlay sub-modal">
-                    <div className="glass modal-content compact-modal">
-                        <h3>Firma de Conformidad</h3>
-                        <div className="sig-canvas-large-wrapper">
-                            <SignatureCanvas
-                                ref={signatureRef}
-                                penColor="black"
-                                canvasProps={{ className: 'sig-canvas-large' }}
-                                backgroundColor="white"
-                            />
-                        </div>
-                        <div className="modal-actions center">
-                            <button onClick={clearSignature} className="btn-secondary">Limpiar</button>
-                            <button onClick={() => setShowSignatureModal(false)} className="btn-secondary">Cancelar</button>
-                            <button onClick={handleConfirmSignature} className="btn-primary">Aceptar Firma</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- MODAL DETALLE HISTORIAL --- */}
-            {viewingCollection && (
-                <div className="modal-overlay">
-                    <div className="glass modal-content collection-modal detail-mode">
-                        <div className="modal-header">
-                            <h3>Detalle de Corte</h3>
-                            <button className="close-btn" onClick={() => setViewingCollection(null)}>✕</button>
-                        </div>
-
-                        <div className="modal-body-scrolled">
-                            <div className="detail-section">
-                                <div className="detail-row">
-                                    <span className="label">Ubicación:</span>
-                                    <span className="val">{viewingCollection.machines?.location_name}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="label">Fecha:</span>
-                                    <span className="val">{(() => {
-                                        if (!viewingCollection.collection_date) return '-'
-                                        const [y, m, d] = viewingCollection.collection_date.split('T')[0].split('-')
-                                        return `${d}/${m}/${y}`
-                                    })()}</span>
-                                </div>
-                            </div>
-
-                            <div className="detail-section highlight-box">
-                                <div className="detail-row">
-                                    <span className="label">Monto Recolectado:</span>
-                                    <span className="val money">${parseFloat(viewingCollection.gross_amount).toFixed(2)}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="label">Comisión ({viewingCollection.commission_percent_snapshot}%):</span>
-                                    <span className="val commission">-${parseFloat(viewingCollection.commission_amount).toFixed(2)}</span>
-                                </div>
-                                <div className="divider-dash"></div>
-                                <div className="detail-row total">
-                                    <span className="label">Ganancia Neta:</span>
-                                    <span className="val profit">${(parseFloat(viewingCollection.profit_amount) || parseFloat(viewingCollection.net_revenue)).toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div className="detail-section">
-                                <h4 className="section-header">Evidencias</h4>
-                                <div className="evidence-grid-view">
-                                    {viewingCollection.evidence_photo_url ? (
-                                        <div className="evidence-item">
-                                            <span>Foto Contador</span>
-                                            <img src={viewingCollection.evidence_photo_url} alt="Foto" />
-                                        </div>
-                                    ) : (
-                                        <div className="evidence-empty">Sin foto</div>
-                                    )}
-
-                                    {viewingCollection.evidence_signature_url ? (
-                                        <div className="evidence-item">
-                                            <span>Firma</span>
-                                            <img src={viewingCollection.evidence_signature_url} alt="Firma" className="sig-img" />
-                                        </div>
-                                    ) : (
-                                        <div className="evidence-empty">Sin firma</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="detail-section">
-                                <h4 className="section-header">Operaciones</h4>
-                                <button
-                                    onClick={() => handleResendReceipt(viewingCollection.id)}
-                                    className="action-btn-full secondary"
-                                    disabled={resendingId === viewingCollection.id}
-                                >
-                                    {resendingId === viewingCollection.id ? 'Enviando...' : '📧 Reenviar Recibo por Correo'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        .collections-page { padding: 20px; max-width: 1400px; margin: 0 auto; color: white; padding-bottom: 80px; }
-        
-        /* --- NEW MODAL & ACTION STYLES --- */
-        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .action-card { 
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 12px; padding: 15px; cursor: pointer; transition: 0.2s; 
-            min-height: 160px; display: flex; flex-direction: column;
-        }
-        .action-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.3); }
-        
-        .action-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-dim); }
-        .file-controls { display: flex; gap: 8px; }
-        .control-btn { background: rgba(0,0,0,0.3); border: none; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; }
-        .control-btn.danger { color: #f87171; }
-
-        .action-placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-dim); }
-        .preview-container { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 8px; background: rgba(0,0,0,0.2); }
-        .photo-preview-compact { width: 100%; height: 100px; object-fit: contain; }
-        .sig-preview-compact { width: 100%; height: 80px; object-fit: contain; filter: invert(1); }
-
-        /* Sub Modals */
-        .sub-modal { z-index: 2000; background: rgba(0,0,0,0.85); }
-        .compact-modal { width: 90%; max-width: 500px; padding: 25px; }
-        .photo-drop-zone { 
-            border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; 
-            height: 250px; display: flex; align-items: center; justify-content: center; 
-            margin: 20px 0; cursor: pointer; background: rgba(0,0,0,0.2);
-        }
-        .drop-placeholder { text-align: center; color: var(--text-dim); }
-        .modal-preview-img { max-width: 100%; max-height: 100%; border-radius: 8px; }
-
-        .sig-canvas-large-wrapper { background: white; border-radius: 12px; overflow: hidden; height: 300px; margin: 20px 0; }
-        .sig-canvas-large { width: 100%; height: 100%; display: block; }
-        .center { justify-content: center; }
-
-        /* Detail Modal Styles */
-        .modal-body-scrolled { max-height: 70vh; overflow-y: auto; padding-right: 5px; }
-        .detail-section { margin-bottom: 20px; }
-        .detail-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
-        .label { color: var(--text-dim); }
-        .val { font-weight: 500; }
-        .val.money { color: var(--text-light); }
-        .val.commission { color: #f87171; }
-        .val.profit { color: var(--primary-color); font-weight: bold; }
-        .highlight-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
-        .divider-dash { border-top: 1px dashed rgba(255,255,255,0.1); margin: 10px 0; }
-        .section-header { margin: 0 0 10px 0; color: var(--text-dim); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .evidence-grid-view { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .evidence-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; text-align: center; }
-        .evidence-item span { display: block; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-dim); }
-        .evidence-item img { max-width: 100%; max-height: 150px; border-radius: 4px; }
-        .evidence-item .sig-img { background: white; padding: 5px; }
-        .action-btn-full { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .action-btn-full.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
-        .action-btn-full.secondary:hover { background: rgba(255,255,255,0.15); border-color: white; }
-
-        /* --- EXISTING LAYOUT --- */
-        .page-header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
-        .header-left { display: flex; align-items: center; gap: 16px; }
-        .back-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: white; transition: all 0.2s; }
-        .back-btn:hover { background: var(--primary-color); color: black; }
-        .page-header h1 { margin: 0; font-size: 1.8rem; }
-        .subtitle { color: var(--text-dim); margin: 4px 0 0 0; font-size: 0.9rem; }
-        
-        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 24px; }
-        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
-
-        .glass { background: #161b22; border: 1px solid rgba(48,54,61,0.5); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .glass-hover { background: rgba(255,255,255,0.02); border: 1px solid transparent; border-radius: 8px; transition: all 0.2s; }
-        .glass-hover:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); transform: translateY(-2px); }
-
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .panel-header h3 { margin: 0; font-size: 1.1rem; }
-        .badge { background: rgba(16, 185, 129, 0.1); color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-
-        .search-box-container { margin-bottom: 15px; position: relative; }
-        .search-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px 10px 10px 35px; border-radius: 8px; color: white; box-sizing: border-box; }
-        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
-
-        .scrollable-list { max-height: 600px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 8px; }
-        .machine-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; cursor: default; }
-        .m-info h4 { margin: 0 0 4px 0; font-size: 0.95rem; }
-        .sub-text { margin: 0; font-size: 0.8rem; color: var(--text-dim); }
-        .action-btn-icon { background: rgba(16, 185, 129, 0.1); color: var(--primary-color); border: none; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
-        .action-btn-icon:hover { background: var(--primary-color); color: black; }
-        .empty-search-state { text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.9rem; }
-
-        .table-responsive { overflow-x: auto; }
-        .history-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        .history-table th { text-align: left; padding: 12px; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .history-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .amount { font-family: 'SF Mono', monospace; font-weight: 600; }
-        .commission { color: #f87171; }
-        .profit { color: var(--primary-color); }
-        .delete-btn-mini { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 6px; border-radius: 4px; opacity: 0.6; transition: 0.2s; }
-        .delete-btn-mini:hover { background: rgba(220, 38, 38, 0.2); color: #ef4444; opacity: 1; }
-        .view-btn-mini { background: transparent; border: none; color: var(--primary-color); cursor: pointer; padding: 6px; border-radius: 4px; margin-right: 5px; opacity: 0.8; transition: 0.2s; }
-        .view-btn-mini:hover { background: rgba(16, 185, 129, 0.1); opacity: 1; }
-        .empty-cell { text-align: center; color: var(--text-dim); padding: 30px; }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
-        .collection-modal { padding: 0; }
-        .modal-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { margin: 0; }
-        .close-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
-        
-        .modal-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 25px; }
-        @media (max-width: 768px) { .modal-body-grid { grid-template-columns: 1fr; } }
-        
-        .form-section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-color); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 15px; font-weight: 700; }
-        .mt-4 { margin-top: 25px; }
-        
-        .input-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .input-group label { font-size: 0.9rem; color: var(--text-dim); }
-        .input-group input, .input-group select { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; color: white; font-size: 1rem; }
-        .input-group input:focus { border-color: var(--primary-color); outline: none; }
-        .money-input { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); }
-
-        .commission-control { display: flex; align-items: center; gap: 10px; }
-        .commission-control input { width: 80px; }
-        .commission-value { color: #f87171; font-weight: bold; }
-
-        .days-selector { display: flex; gap: 8px; }
-        .days-selector button { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid transparent; color: var(--text-dim); padding: 8px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-        .days-selector button.active { background: var(--primary-color); color: black; font-weight: bold; }
-        .custom-days { width: 60px !important; text-align: center; }
-
-        .modal-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; }
-        .profit-summary { display: flex; flex-direction: column; align-items: flex-start; }
-        .profit-summary .label { font-size: 0.8rem; color: var(--text-dim); }
-        .profit-summary .highlight { font-size: 1.4rem; font-weight: bold; color: var(--primary-color); }
-        
-        .modal-actions { display: flex; gap: 12px; }
-        .btn-primary { background: var(--primary-color); color: black; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-primary:hover:not(:disabled) { box-shadow: 0 4px 12px var(--primary-glow); transform: translateY(-1px); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
-        .btn-secondary:hover { background: rgba(255,255,255,0.05); }
-        
-        .full-width { width: 100%; }
-
-        /* Toasts */
-        .toast-notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #333; color: white; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; transition: 0.3s; }
-        .toast-notification:hover { transform: scale(1.02); }
-        .toast-notification.success { background: #10b981; border-left: 4px solid #059669; }
-        .toast-notification.error { background: #ef4444; border-left: 4px solid #b91c1c; }
-        .toast-notification.info { background: #3b82f6; border-left: 4px solid #2563eb; }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        /* Switch */
-        .switch-wrapper { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .switch-wrapper input { opacity: 0; width: 0; height: 0; }
-        .switch-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 24px; }
-        .switch-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .switch-slider { background-color: var(--primary-color); }
-        input:checked + .switch-slider:before { transform: translateX(20px); background-color: black; }
-
-        .incident-panel { background: rgba(220, 38, 38, 0.05); border: 1px solid rgba(220, 38, 38, 0.2); padding: 15px; border-radius: 8px; margin-top: 10px; }
-        .dark-select { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; }
-        .checkbox-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; cursor: pointer; font-weight: 500; font-size: 0.9rem; }
-        .helper-text { font-size: 0.75rem; color: var(--text-dim); margin: 5px 0 0 25px; }
-            ` }} />
-        </div>
+        </div >
     )
 }

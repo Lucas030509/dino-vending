@@ -121,13 +121,13 @@ export default function RoutePlanner() {
         }
 
         const waypoints = targets
-            .map(m => encodeURIComponent(m.address || m.location_name))
+            .map(m => encodeURIComponent((m.address || m.location_name) + ', Mexico'))
             .join('|')
 
-        const destination = encodeURIComponent(targets[targets.length - 1].address || targets[targets.length - 1].location_name)
+        const destination = encodeURIComponent((targets[targets.length - 1].address || targets[targets.length - 1].location_name) + ', Mexico')
         const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}&waypoints=${waypoints}`
         window.open(url, '_blank')
-        showToast("Ruta abierta en Google Maps", "success")
+        showToast("Ruta abierta en Google Maps (Prioridad MX)", "success")
     }
 
     const handleSaveRoute = async () => {
@@ -322,7 +322,7 @@ export default function RoutePlanner() {
                                 disabled={selectedIds.size === 0}
                             >
                                 <Save size={18} />
-                                Guardar Ruta
+                                Guardar ({selectedIds.size})
                             </button>
 
                             <button
@@ -331,7 +331,7 @@ export default function RoutePlanner() {
                                 disabled={selectedIds.size === 0}
                             >
                                 <Map size={18} />
-                                Generar en Maps
+                                Maps ({selectedIds.size})
                             </button>
                         </div>
 
