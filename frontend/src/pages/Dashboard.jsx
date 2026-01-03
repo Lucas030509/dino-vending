@@ -763,7 +763,11 @@ export default function Dashboard({ isSuperAdmin }) {
             display: flex; justify-content: center; align-items: center;
             z-index: 1000; padding: 20px;
         }
+        }
       `}} />
+      <div style={{ position: 'fixed', bottom: 5, right: 10, color: 'var(--text-dim)', fontSize: '0.7rem', opacity: 0.5, pointerEvents: 'none' }}>
+        v: 24.01.03-fix-gps
+      </div>
     </div >
   )
 }
