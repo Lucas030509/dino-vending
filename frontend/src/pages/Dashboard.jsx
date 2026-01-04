@@ -246,9 +246,9 @@ export default function Dashboard({ isSuperAdmin }) {
     const destItem = agenda[agenda.length - 1]
     const destination = encodeURIComponent(getLocation(destItem))
 
-    // Fix: Removed 'origin=Current+Location' to prevent 'Krum, TX' glitch.
-    // Maps will default to device GPS.
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}`
+    // Fix: Using 'My+Location' explicitly tells mobile apps to use GPS start point.
+    // 'Current+Location' caused issues, 'My+Location' is safer for intents.
+    const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destination}&waypoints=${waypoints}`
 
     window.open(url, '_blank')
   }
@@ -781,7 +781,7 @@ export default function Dashboard({ isSuperAdmin }) {
         onMouseEnter={(e) => e.target.style.opacity = 1}
         onMouseLeave={(e) => e.target.style.opacity = 0}
       >
-        v: 24.01.03-fix-origin
+        v: 24.01.03-fix-mobile
       </div>
     </div >
   )
