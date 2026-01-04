@@ -120,14 +120,32 @@ export default function RoutePlanner() {
             targets = machines.filter(m => selectedIds.has(m.id))
         }
 
+        // Helper to get efficient map target
+        const getLocationForMaps = (m) => {
+            // 1. Try to use explicit coords from maps_url (FASTEST)
+            if (m.maps_url && m.maps_url.includes('q=')) {
+                try {
+                    const coords = m.maps_url.split('q=')[1].split('&')[0]
+                    return coords // Returns "lat,lon" directly
+                } catch (e) {
+                    console.warn("Failed to parse coords", m.maps_url)
+                }
+            }
+            // 2. Fallback to address search (SLOWER)
+            const query = (m.address || m.location_name) || ''
+            return query.includes('Mexico') ? query : `${query}, Mexico`
+        }
+
         const waypoints = targets
-            .map(m => encodeURIComponent((m.address || m.location_name) + ', Mexico'))
+            .map(m => encodeURIComponent(getLocationForMaps(m)))
             .join('|')
 
-        const destination = encodeURIComponent((targets[targets.length - 1].address || targets[targets.length - 1].location_name) + ', Mexico')
+        const lastTarget = targets[targets.length - 1];
+        const destination = encodeURIComponent(getLocationForMaps(lastTarget))
+
         const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}&waypoints=${waypoints}`
         window.open(url, '_blank')
-        showToast("Ruta abierta en Google Maps (Prioridad MX)", "success")
+        showToast("Ruta abierta en Google Maps (Optimizado)", "success")
     }
 
     const handleSaveRoute = async () => {
