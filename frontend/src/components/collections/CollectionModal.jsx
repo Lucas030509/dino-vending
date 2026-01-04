@@ -1,18 +1,17 @@
 import React, { useState } from 'react'
-import { Plus, Trash2, Camera, Eraser } from 'lucide-react'
-import SignatureCanvas from 'react-signature-canvas'
+import { Plus, Camera, Eraser } from 'lucide-react'
 
 export const CollectionModal = ({
-    machine,
+    machine = {},
     onClose,
     onSubmit,
-    newCollection,
+    newCollection = {},
     setNewCollection,
-    reportForm,
+    reportForm = {},
     setReportForm,
     machineAlert,
-    commissionAmount,
-    netProfit,
+    commissionAmount = 0,
+    netProfit = 0,
     signatureRef,
     clearSignature,
     signaturePreview,
@@ -25,7 +24,7 @@ export const CollectionModal = ({
     setShowSignatureModal,
     photoFile,
     setPhotoFile,
-    isSubmitting
+    isSubmitting = false
 }) => {
     // We can include sub-logic here, or keep receiving props from parent
     // For Phase 3 refactor, we just move the JSX structure first.
@@ -74,7 +73,7 @@ export const CollectionModal = ({
                                     <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
                                         Modelo de Renta Fija
                                         <div style={{ color: 'white', marginTop: 4, fontWeight: 'bold' }}>
-                                            ${machine.rent_amount} / {machine.rent_periodicity}
+                                            ${machine?.rent_amount || '0'} / {machine?.rent_periodicity || 'Mes'}
                                         </div>
                                     </div>
                                 </div>
