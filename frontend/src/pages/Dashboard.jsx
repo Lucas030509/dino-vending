@@ -781,7 +781,7 @@ export default function Dashboard({ isSuperAdmin }) {
         onMouseEnter={(e) => e.target.style.opacity = 1}
         onMouseLeave={(e) => e.target.style.opacity = 0}
       >
-        v: 24.01.03-fix-modal
+        v: 24.01.04-FINAL
       </div>
     </div >
   )
