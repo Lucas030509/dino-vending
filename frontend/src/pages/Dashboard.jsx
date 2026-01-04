@@ -229,16 +229,26 @@ export default function Dashboard({ isSuperAdmin }) {
   const handleGenerateRoute = () => {
     if (agenda.length === 0) return
 
-    // Construct Google Maps URL: dir/Origin/Dest/Waypoint1/Waypoint2...
-    // We'll use "Mi+Ubicacion" as origin if possible, or just list the points.
-    // The most compatible URL for multiple points:
-    // https://www.google.com/maps/dir/?api=1&origin=My+Location&waypoints=Addr1|Addr2...
+    // Helper to get robust location (Coords > Address)
+    // Optimized for speed and accuracy
+    const getLocation = (item) => {
+      if (item.maps_url && item.maps_url.includes('q=')) {
+        try { return item.maps_url.split('q=')[1].split('&')[0] } catch (e) { }
+      }
+      const q = item.address || item.name
+      return q.includes('Mexico') ? q : `${q}, Mexico`
+    }
 
     const waypoints = agenda
-      .map(item => encodeURIComponent(item.address || item.name))
+      .map(item => encodeURIComponent(getLocation(item)))
       .join('|')
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${encodeURIComponent(agenda[agenda.length - 1].address || agenda[agenda.length - 1].name)}&waypoints=${waypoints}`
+    const destItem = agenda[agenda.length - 1]
+    const destination = encodeURIComponent(getLocation(destItem))
+
+    // Fix: Removed 'origin=Current+Location' to prevent 'Krum, TX' glitch.
+    // Maps will default to device GPS.
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}`
 
     window.open(url, '_blank')
   }
@@ -771,7 +781,7 @@ export default function Dashboard({ isSuperAdmin }) {
         onMouseEnter={(e) => e.target.style.opacity = 1}
         onMouseLeave={(e) => e.target.style.opacity = 0}
       >
-        v: 24.01.03-fix-gps+btn
+        v: 24.01.03-fix-origin
       </div>
     </div >
   )

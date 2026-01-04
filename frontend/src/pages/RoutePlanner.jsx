@@ -143,7 +143,7 @@ export default function RoutePlanner() {
         const lastTarget = targets[targets.length - 1];
         const destination = encodeURIComponent(getLocationForMaps(lastTarget))
 
-        const url = `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${destination}&waypoints=${waypoints}`
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}`
         window.open(url, '_blank')
         showToast("Ruta abierta en Google Maps (Optimizado)", "success")
     }
