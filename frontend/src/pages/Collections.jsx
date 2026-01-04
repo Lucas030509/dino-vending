@@ -510,8 +510,8 @@ export default function Collections() {
                     setShowPhotoModal={setShowPhotoModal}
                     showSignatureModal={showSignatureModal}
                     setShowSignatureModal={setShowSignatureModal}
-                    photoFile={photoFile}
-                    setPhotoFile={setPhotoFile}
+                    photoFile={photoBlob}
+                    setPhotoFile={setPhotoBlob}
                     isSubmitting={isSubmitting}
                 />
             )}

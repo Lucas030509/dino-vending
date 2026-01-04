@@ -551,6 +551,7 @@ export default function Dashboard({ isSuperAdmin }) {
 
                 <div className="input-group">
                   <label>Logotipo del Negocio</label>
+
                   <div className="file-upload-wrapper">
                     <input
                       type="file"
@@ -781,7 +782,7 @@ export default function Dashboard({ isSuperAdmin }) {
         onMouseEnter={(e) => e.target.style.opacity = 1}
         onMouseLeave={(e) => e.target.style.opacity = 0}
       >
-        v: 24.01.04-fix-timezone
+        v: 24.01.04-fix-crash
       </div>
     </div >
   )
