@@ -499,7 +499,7 @@ export default function Collections() {
                     setReportForm={setReportForm}
                     machineAlert={machineAlert}
                     commissionAmount={commissionAmount}
-                    netProfit={netProfit}
+                    netProfit={profitAmount}
                     signatureRef={signatureRef}
                     clearSignature={clearSignature}
                     signaturePreview={signaturePreview}
