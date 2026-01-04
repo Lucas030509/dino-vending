@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square, User, Mail, Phone, Clock, DollarSign } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Search, Loader2, Settings, Upload, MapPin, Trash2, CheckCircle2, Printer, CheckSquare, Square, User, Mail, Phone, Clock, DollarSign, Navigation } from 'lucide-react'
 import { read, utils } from 'xlsx'
 import { QRCodeSVG } from 'qrcode.react'
 import { jsPDF } from 'jspdf'
@@ -348,6 +348,45 @@ export default function Machines() {
         setNewMachine(prev => ({ ...prev, address, maps_url: mapsUrl }))
         setSearchQuery(address)
         setShowSuggestions(false)
+    }
+
+    const handleUseGPS = () => {
+        if (!("geolocation" in navigator)) {
+            showToast("Tu navegador no soporta geolocalización", "error")
+            return
+        }
+
+        setIsSearching(true)
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude
+                const lon = position.coords.longitude
+                const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`
+                const gpsText = `Ubicación GPS (${lat.toFixed(5)}, ${lon.toFixed(5)})`
+
+                setNewMachine(prev => ({
+                    ...prev,
+                    maps_url: mapsUrl,
+                    address: (!prev.address || prev.address === '') ? gpsText : prev.address
+                }))
+
+                // If address was empty, fill search query with coordinates so user sees something happened
+                if (!searchQuery) setSearchQuery(gpsText)
+
+                showToast("Ubicación GPS capturada correctamente", "success")
+                setIsSearching(false)
+            },
+            (error) => {
+                console.error("GPS Error:", error)
+                let msg = "Error al obtener ubicación."
+                if (error.code === 1) msg = "Permiso de ubicación denegado."
+                if (error.code === 2) msg = "Ubicación no disponible."
+                if (error.code === 3) msg = "Tiempo de espera agotado."
+                showToast(msg, "error")
+                setIsSearching(false)
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        )
     }
 
     // --- Excel Upload ---
@@ -855,7 +894,30 @@ export default function Machines() {
                             </div>
 
                             <div className="input-group search-container">
-                                <label>Dirección</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <label>Dirección</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleUseGPS}
+                                        className="gps-btn"
+                                        style={{
+                                            background: 'rgba(16, 185, 129, 0.1)',
+                                            border: '1px solid var(--primary-color)',
+                                            color: 'var(--primary-color)',
+                                            padding: '4px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.75rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            fontWeight: '600'
+                                        }}
+                                        title="Capturar ubicación actual del dispositivo"
+                                    >
+                                        <Navigation size={14} /> Usar mi Ubicación
+                                    </button>
+                                </div>
                                 <div className="search-input-wrapper">
                                     <input
                                         type="text"

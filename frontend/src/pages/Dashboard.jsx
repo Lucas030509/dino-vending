@@ -765,8 +765,13 @@ export default function Dashboard({ isSuperAdmin }) {
         }
         }
       `}} />
-      <div style={{ position: 'fixed', bottom: 5, right: 10, color: 'var(--text-dim)', fontSize: '0.7rem', opacity: 0.5, pointerEvents: 'none' }}>
-        v: 24.01.03-fix-gps
+      <div
+        className="version-tag"
+        style={{ position: 'fixed', bottom: 5, right: 10, color: 'var(--text-dim)', fontSize: '0.6rem', opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'auto', cursor: 'default' }}
+        onMouseEnter={(e) => e.target.style.opacity = 1}
+        onMouseLeave={(e) => e.target.style.opacity = 0}
+      >
+        v: 24.01.03-fix-gps+btn
       </div>
     </div >
   )
