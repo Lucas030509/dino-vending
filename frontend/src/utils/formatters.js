@@ -29,10 +29,15 @@ export const formatDateDDMMYYYY = (dateString) => {
  * @returns {string}
  */
 export const getMexicoCityDate = () => {
-    return new Intl.DateTimeFormat('sv-SE', {
-        timeZone: 'America/Mexico_City',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).format(new Date());
+    try {
+        return new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'America/Mexico_City',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+    } catch (e) {
+        console.warn('Timezone not supported, falling back to local date');
+        return new Date().toISOString().split('T')[0];
+    }
 };
