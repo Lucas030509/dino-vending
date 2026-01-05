@@ -5,6 +5,7 @@ import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2,
 import SignatureCanvas from 'react-signature-canvas'
 import { getMexicoCityDate, formatDateDDMMYYYY } from '../utils/formatters'
 import { CollectionModal } from '../components/collections/CollectionModal'
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'
 import './Collections.css'
 
 export default function Collections() {
@@ -15,6 +16,8 @@ export default function Collections() {
     const [loading, setLoading] = useState(true)
     const [selectedMachine, setSelectedMachine] = useState(null)
     const [showModal, setShowModal] = useState(false)
+    const [collectionToDelete, setCollectionToDelete] = useState(null)
+    const [isDeleting, setIsDeleting] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Toast State
@@ -338,12 +341,20 @@ export default function Collections() {
         }
     }
 
-    const handleDeleteCollection = async (id) => {
-        if (confirm('¿Estás seguro de que deseas eliminar este corte? Se recalcularán los contadores.')) {
+    const handleDeleteCollection = (e, col) => {
+        e.stopPropagation()
+        setCollectionToDelete(col)
+    }
+
+    const resolveDeleteCollection = async () => {
+        if (!collectionToDelete) return
+        setIsDeleting(true)
+
+        try {
             const { error } = await supabase
                 .from('collections')
                 .delete()
-                .eq('id', id)
+                .eq('id', collectionToDelete.id)
 
             if (error) {
                 console.error('Error deleting collection:', error)
@@ -352,6 +363,12 @@ export default function Collections() {
                 fetchData() // Assuming fetchData also refreshes collections
                 showToast('Corte eliminado correctamente', 'success')
             }
+        } catch (err) {
+            console.error(err)
+            showToast('Error inesperado', 'error')
+        } finally {
+            setIsDeleting(false)
+            setCollectionToDelete(null)
         }
     }
 
@@ -470,7 +487,7 @@ export default function Collections() {
                                             <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
                                                 <Eye size={14} />
                                             </button>
-                                            <button onClick={() => handleDeleteCollection(col.id)} className="delete-btn-mini" title="Eliminar Corte">
+                                            <button onClick={(e) => handleDeleteCollection(e, col)} className="delete-btn-mini" title="Eliminar Corte">
                                                 <Trash2 size={14} />
                                             </button>
                                         </td>
@@ -650,6 +667,24 @@ export default function Collections() {
             }
 
 
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!collectionToDelete}
+                onClose={() => setCollectionToDelete(null)}
+                onConfirm={resolveDeleteCollection}
+                title="Eliminar Corte"
+                message={
+                    <span>
+                        ¿Estás seguro de eliminar el corte del <strong>{formatDateDDMMYYYY(collectionToDelete?.collection_date)}</strong>?
+                        <br /><br />
+                        <small style={{ color: '#ef4444' }}>⚠ Esto afectará los contadores y reportes financieros.</small>
+                    </span>
+                }
+                confirmText="Sí, Eliminar"
+                isDestructive={true}
+                isLoading={isDeleting}
+            />
         </div >
     )
 }

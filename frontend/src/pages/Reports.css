@@ -1,0 +1,262 @@
+.reports-page {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    color: white;
+    padding-bottom: 80px;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: var(--primary-color);
+    color: black;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+/* .page-header h1 appeared twice in original css? I kept one */
+.subtitle {
+    color: var(--text-dim);
+    margin: 4px 0 0 0;
+    font-size: 0.9rem;
+}
+
+.tabs-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: black;
+    font-weight: 600;
+}
+
+.empty-glass {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    color: #888;
+}
+
+.empty-icon {
+    opacity: 0.5;
+    margin-bottom: 10px;
+}
+
+.report-card {
+    position: relative;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(22, 27, 34, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.2s;
+}
+
+@media (max-width: 600px) {
+    .report-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .r-actions {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .report-status-stripe {
+        height: 100%;
+        width: 6px;
+        order: -1;
+    }
+
+    .report-card {
+        border-left: 6px solid transparent;
+    }
+
+    /* Fallback layout fix */
+    .report-status-stripe {
+        display: none;
+    }
+
+    /* Hide stripe on mobile col layout, use border-left instead */
+}
+
+.report-card.resolved {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+}
+
+.report-status-stripe {
+    width: 6px;
+    align-self: stretch;
+    flex-shrink: 0;
+}
+
+.report-content {
+    padding: 16px;
+    flex: 1;
+}
+
+.r-header {
+    display: flex;
+    gap: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    align-items: center;
+}
+
+.r-type {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.r-date {
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.report-content h3 {
+    margin: 0 0 2px 0;
+    font-size: 1.1rem;
+}
+
+.r-uid {
+    font-size: 0.8rem;
+    color: #666;
+    font-family: monospace;
+    margin: 0 0 8px 0;
+}
+
+.r-desc {
+    font-style: italic;
+    color: #ccc;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.view-photo-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.view-photo-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.r-actions {
+    padding: 16px;
+}
+
+.resolve-btn {
+    background: var(--primary-color);
+    color: black;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.resolved-badge {
+    color: #10b981;
+    font-weight: 600;
+    border: 1px solid #10b981;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.image-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.image-modal img {
+    max-width: 90%;
+    max-height: 90vh;
+    border-radius: 8px;
+}

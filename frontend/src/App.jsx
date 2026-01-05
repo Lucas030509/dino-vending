@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import Auth from './pages/Auth'
-import Dashboard from './pages/Dashboard'
-import Machines from './pages/Machines'
-import RoutePlanner from './pages/RoutePlanner'
-import Collections from './pages/Collections'
-import PublicReport from './pages/PublicReport'
-import Reports from './pages/Reports'
-import AdminDashboard from './pages/AdminDashboard'
+import LoadingSpinner from './components/ui/LoadingSpinner'
+
+// Lazy Load Pages to optimize initial bundle (Fase 1 Audit)
+const Auth = React.lazy(() => import('./pages/Auth'))
+const Dashboard = React.lazy(() => import('./pages/Dashboard'))
+const Machines = React.lazy(() => import('./pages/Machines'))
+const RoutePlanner = React.lazy(() => import('./pages/RoutePlanner'))
+const Collections = React.lazy(() => import('./pages/Collections'))
+const PublicReport = React.lazy(() => import('./pages/PublicReport'))
+const Reports = React.lazy(() => import('./pages/Reports'))
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
 
 function App() {
   const [session, setSession] = useState(null)
@@ -78,20 +81,22 @@ function App() {
     <Router>
       <div className="layout">
         <main className="container">
-          <Routes>
-            <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
 
-            {/* Admin Route */}
-            <Route path="/admin" element={session && userRole === 'super_admin' ? <AdminDashboard session={session} /> : <Navigate to="/" />} />
+              {/* Admin Route */}
+              <Route path="/admin" element={session && userRole === 'super_admin' ? <AdminDashboard session={session} /> : <Navigate to="/" />} />
 
-            {/* Standard Routes */}
-            <Route path="/" element={session ? <Dashboard isSuperAdmin={userRole === 'super_admin'} /> : <Navigate to="/auth" />} />
-            <Route path="/machines" element={session ? <Machines /> : <Navigate to="/auth" />} />
-            <Route path="/routes" element={session ? <RoutePlanner /> : <Navigate to="/auth" />} />
-            <Route path="/collections" element={session ? <Collections /> : <Navigate to="/auth" />} />
-            <Route path="/reports" element={session ? <Reports /> : <Navigate to="/auth" />} />
-            <Route path="/report/:uid" element={<PublicReport />} />
-          </Routes>
+              {/* Standard Routes */}
+              <Route path="/" element={session ? <Dashboard isSuperAdmin={userRole === 'super_admin'} /> : <Navigate to="/auth" />} />
+              <Route path="/machines" element={session ? <Machines /> : <Navigate to="/auth" />} />
+              <Route path="/routes" element={session ? <RoutePlanner /> : <Navigate to="/auth" />} />
+              <Route path="/collections" element={session ? <Collections /> : <Navigate to="/auth" />} />
+              <Route path="/reports" element={session ? <Reports /> : <Navigate to="/auth" />} />
+              <Route path="/report/:uid" element={<PublicReport />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 

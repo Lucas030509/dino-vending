@@ -1,0 +1,552 @@
+/* V3 New Styles */
+.week-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.week-days button {
+    padding: 8px 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.week-days button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.week-days button.active.closed-day {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.contract-switch {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.contract-switch button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.contract-switch button.active {
+    background: var(--primary-color);
+    color: black;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.glass-panel-inner {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
+}
+
+.select-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 1rem;
+}
+
+.machines-page {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    color: white;
+    padding-bottom: 80px;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: var(--primary-color);
+    color: black;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.subtitle {
+    color: var(--text-dim);
+    margin: 4px 0 0 0;
+    font-size: 0.9rem;
+}
+
+.selected-card {
+    border-color: var(--primary-color) !important;
+    background: rgba(16, 185, 129, 0.05) !important;
+}
+
+.selection-trigger {
+    margin-right: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.dim {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+/* Toolbar */
+.toolbar-glass {
+    background: rgba(22, 27, 34, 0.7);
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    backdrop-filter: blur(12px);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+/* QR Print Styles */
+.qr-print-sheet {
+    width: 210mm;
+    padding: 10mm;
+    background: white;
+    color: black;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10mm;
+}
+
+.qr-sticker {
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.qr-box {
+    margin-bottom: 8px;
+}
+
+.qr-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.qr-info strong {
+    font-size: 12px;
+}
+
+.qr-info span {
+    font-size: 10px;
+    color: #666;
+    font-family: monospace;
+}
+
+.qr-info small {
+    font-size: 8px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.search-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 250px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-filter input {
+    background: transparent;
+    border: none;
+    color: white;
+    flex: 1;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+.search-icon {
+    color: var(--text-dim);
+}
+
+.select-all-icon-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 10px;
+    margin-left: 5px;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.add-btn.primary {
+    background: var(--primary-color);
+    color: black;
+}
+
+.add-btn.primary:hover {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.add-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.add-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Grid */
+.machine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.machine-card {
+    padding: 20px;
+    border-radius: 16px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.machine-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-color);
+}
+
+.m-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+}
+
+.status-dot.active {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.status-dot.inactive {
+    background: #ef4444;
+}
+
+.card-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.edit-icon-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--text-dim);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-icon-btn:hover {
+    background: var(--primary-color);
+    color: black;
+}
+
+.edit-icon-btn.delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.m-body h4 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+}
+
+.qr-ref {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin: 0 0 16px 0;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zone-tag {
+    background: var(--primary-color);
+    color: black;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.machine-stats-mini {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.stat-pill {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    display: flex;
+    gap: 6px;
+}
+
+.stat-pill .label {
+    color: var(--text-dim);
+}
+
+.stat-pill .val {
+    font-weight: 600;
+    color: white;
+}
+
+.m-footer {
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.address-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.address-link:hover {
+    color: var(--primary-color);
+}
+
+/* Modal specific hacks for dark input integration */
+.modal-content {
+    max-width: 500px;
+    padding: 25px;
+    background: #161b22;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.input-group label {
+    margin-bottom: 6px;
+    display: block;
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+input {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    padding: 10px;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input:focus {
+    border-color: var(--primary-color) !important;
+    outline: none;
+}
+
+.columns-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* Map Suggestions */
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1c2128;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 4px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.suggestion-item {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.suggestion-item:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: white;
+}
+
+.search-container {
+    position: relative;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    right: 10px;
+    color: var(--text-dim);
+    pointer-events: none;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.btn-primary,
+.btn-secondary {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: rgb(0, 0, 0);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}

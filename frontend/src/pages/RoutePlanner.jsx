@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers, Save, List, Plus, Trash2, CheckCircle, Clock } from 'lucide-react'
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import './RoutePlanner.css'
 
 export default function RoutePlanner() {
     // --- Existing State ---
@@ -17,6 +19,8 @@ export default function RoutePlanner() {
     const [savedRoutes, setSavedRoutes] = useState([])
     const [routesLoading, setRoutesLoading] = useState(false)
     const [viewingRoute, setViewingRoute] = useState(null) // If not null, showing details of a saved route
+    const [confirmAction, setConfirmAction] = useState(null) // { type: 'delete' | 'finish', data: route }
+    const [isProcessing, setIsProcessing] = useState(false)
 
     // Toast
     const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
@@ -236,31 +240,38 @@ export default function RoutePlanner() {
         }
     }
 
-    const handleDeleteRoute = async (routeId) => {
-        if (!window.confirm("¿Estás seguro de eliminar esta ruta?")) return
-
-        try {
-            const { error } = await supabase.from('routes').delete().eq('id', routeId)
-            if (error) throw error
-
-            showToast("Ruta eliminada", "success")
-            fetchRoutes() // Refresh list
-            if (viewingRoute?.id === routeId) setViewingRoute(null)
-        } catch (e) {
-            showToast("Error al eliminar", "error")
-        }
+    const handleDeleteRoute = (e, route) => {
+        e.stopPropagation()
+        setConfirmAction({ type: 'delete', data: route })
     }
 
-    const handleFinishRoute = async (routeId) => {
-        if (!window.confirm("¿Finalizar ruta y marcar como completada?")) return
+    const handleFinishRoute = (route) => {
+        setConfirmAction({ type: 'finish', data: route })
+    }
+
+    const resolveConfirmation = async () => {
+        if (!confirmAction) return
+        setIsProcessing(true)
 
         try {
-            await supabase.from('routes').update({ status: 'completed' }).eq('id', routeId)
-            showToast("Ruta finalizada", "success")
-            fetchRoutes()
-            setViewingRoute(null)
+            if (confirmAction.type === 'delete') {
+                const { error } = await supabase.from('routes').delete().eq('id', confirmAction.data.id)
+                if (error) throw error
+                showToast("Ruta eliminada", "success")
+                fetchRoutes()
+                if (viewingRoute?.id === confirmAction.data.id) setViewingRoute(null)
+            } else if (confirmAction.type === 'finish') {
+                await supabase.from('routes').update({ status: 'completed' }).eq('id', confirmAction.data.id)
+                showToast("Ruta finalizada", "success")
+                fetchRoutes()
+                setViewingRoute(null)
+            }
         } catch (e) {
             console.error(e)
+            showToast("Error al procesar la acción", "error")
+        } finally {
+            setIsProcessing(false)
+            setConfirmAction(null)
         }
     }
 
@@ -412,7 +423,6 @@ export default function RoutePlanner() {
                                             key={m.id}
                                             className={`select-item ${selectedIds.has(m.id) ? 'selected' : ''} ${isClosed ? 'item-closed' : ''}`}
                                             onClick={() => toggleSelection(m.id)}
-                                            style={isClosed ? { opacity: 0.6 } : {}}
                                         >
                                             <div className="check-indicator">
                                                 {selectedIds.has(m.id) ? <CheckSquare size={20} className="teal" /> : <Square size={20} />}
@@ -462,7 +472,7 @@ export default function RoutePlanner() {
                                         <span><Map size={14} /> {route.route_stops[0]?.count || 0} Paradas</span>
                                     </div>
                                     <div className="route-actions">
-                                        <button className="icon-btn delete" onClick={(e) => { e.stopPropagation(); handleDeleteRoute(route.id); }}>
+                                        <button className="icon-btn delete" onClick={(e) => handleDeleteRoute(e, route)}>
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -514,7 +524,7 @@ export default function RoutePlanner() {
                         {viewingRoute.status !== 'completed' && (
                             <button
                                 className="launch-btn success"
-                                onClick={() => handleFinishRoute(viewingRoute.id)}
+                                onClick={() => handleFinishRoute(viewingRoute)}
                             >
                                 <CheckCircle size={18} /> Finalizar Ruta
                             </button>
@@ -523,132 +533,23 @@ export default function RoutePlanner() {
                 </div>
             )}
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .route-page { max-width: 1000px; margin: 0 auto; padding: 20px; color: white; padding-bottom: 80px; }
-                .page-header { display: flex; align-items: center; margin-bottom: 30px; }
-                .header-left { display: flex; align-items: center; gap: 16px; }
-                .back-btn { display: flex; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); align-items: center; justify-content: center; color: white; transition: 0.2s; }
-                .back-btn:hover { background: var(--primary-color); color: black; }
-                .page-header h1 { margin: 0; font-size: 1.8rem; }
-                .subtitle { color: var(--text-dim); margin: 0; }
-
-                .planner-container { display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
-                @media (max-width: 768px) { .planner-container { grid-template-columns: 1fr; } }
-
-                .glass { background: #161b22; border: 1px solid rgba(48,54,61,0.5); border-radius: 12px; padding: 20px; }
-                
-                .planner-config h3 { display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.1rem; }
-                .input-group { margin: 20px 0; display: flex; flex-direction: column; gap: 8px; }
-                .input-group label { color: var(--text-dim); font-size: 0.9rem; }
-                .input-group input { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; color: white; }
-                
-                .route-summary { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 24px; }
-                .summary-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
-                .summary-item:last-child { margin-bottom: 0; }
-                .summary-item strong { color: var(--primary-color); }
-
-                .launch-btn { 
-                    width: 100%; background: var(--primary-color); color: black; border: none; padding: 12px; 
-                    border-radius: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; 
-                    cursor: pointer; transition: 0.2s; 
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!confirmAction}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={resolveConfirmation}
+                title={confirmAction?.type === 'delete' ? "Eliminar Ruta" : "Finalizar Ruta"}
+                message={
+                    confirmAction?.type === 'delete'
+                        ? <span>¿Eliminar la ruta <strong>{confirmAction?.data?.name}</strong>?</span>
+                        : "¿Marcar esta ruta como completada?"
                 }
-                .launch-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px var(--primary-glow); }
-                .launch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                confirmText={confirmAction?.type === 'delete' ? "Sí, Eliminar" : "Finalizar"}
+                isDestructive={confirmAction?.type === 'delete'}
+                isLoading={isProcessing}
+            />
 
-                .hint-text { font-size: 0.8rem; color: var(--text-dim); margin-top: 15px; text-align: center; line-height: 1.4; }
 
-                /* Selector Layout */
-                .planner-main { display: flex; flex-direction: column; gap: 20px; }
-
-                .zones-selector { padding: 16px; border-radius: 12px; }
-                .zones-selector h3 { font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-                .zones-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-                .zone-pill { 
-                    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); 
-                    color: var(--text-dim); padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; 
-                    cursor: pointer; transition: 0.2s; font-weight: 500;
-                }
-                .zone-pill:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-                .zone-pill.active { background: var(--primary-color); color: black; border-color: var(--primary-color); }
-                .zone-pill.partial { border-color: var(--primary-color); color: var(--primary-color); background: rgba(16, 185, 129, 0.05); }
-
-                /* Selector */
-                .selector-header { display: flex; gap: 12px; margin-bottom: 16px; }
-                .search-box { flex: 1; position: relative; }
-                .search-box input { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px 10px 10px 32px; border-radius: 8px; color: white; }
-                .search-box .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
-                
-                .select-all-btn { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim); padding: 0 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-                .select-all-btn:hover { background: rgba(255,255,255,0.05); color: white; }
-
-                .selection-list { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-                .select-item { 
-                    display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; 
-                    background: rgba(255,255,255,0.02); border: 1px solid transparent; cursor: pointer; transition: 0.2s;
-                }
-                .select-item:hover { background: rgba(255,255,255,0.05); }
-                .select-item.selected { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
-                
-                .item-info h4 { margin: 0 0 2px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
-                .mini-zone { color: var(--primary-color); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; background: rgba(16, 185, 129, 0.1); padding: 2px 4px; border-radius: 3px; }
-                .item-info p { margin: 0; color: var(--text-dim); font-size: 0.8rem; }
-                .teal { color: var(--primary-color); }
-                .closed-badge { background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 8px; font-weight: bold; }
-                
-                .toast-notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #333; color: white; border-radius: 8px; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-
-                /* --- NEW STYLES FOR ROUTE MANAGEMENT --- */
-                .planner-tabs { display: flex; gap: 10px; margin-left: auto; }
-                .tab-btn { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim); padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; transition: 0.2s; }
-                .tab-btn.active { background: var(--primary-color); color: black; border-color: var(--primary-color); font-weight: 600; }
-                .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: white; }
-
-                .actions-stack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
-                .launch-btn.secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
-                .launch-btn.secondary:hover { background: rgba(255,255,255,0.15); border-color: white; }
-                .launch-btn.success { background: #10b981; color: black; }
-                
-                .routes-list-container { width: 100%; }
-                .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
-                .dim-icon { opacity: 0.2; margin-bottom: 15px; }
-
-                .routes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; width: 100%; }
-                .route-card { cursor: pointer; transition: 0.2s; position: relative; }
-                .route-card:hover { transform: translateY(-3px); border-color: var(--primary-color); }
-                
-                .route-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-                .route-date { font-size: 0.8rem; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
-                .status-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; font-weight: bold; }
-                .status-badge.scheduled { background: #3b82f6; color: white; }
-                .status-badge.in_progress { background: #f59e0b; color: black; }
-                .status-badge.completed { background: #10b981; color: black; }
-
-                .route-card h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
-                .route-meta { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-dim); }
-                .route-actions { position: absolute; bottom: 15px; right: 15px; opacity: 0; transition: 0.2s; }
-                .route-card:hover .route-actions { opacity: 1; }
-                .icon-btn.delete { background: rgba(220, 38, 38, 0.2); color: #ef4444; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-                .icon-btn.delete:hover { background: #dc2626; color: white; }
-
-                /* Route Detail */
-                .route-detail-container { max-width: 800px; margin: 0 auto; }
-                .detail-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
-                .back-link { background: none; border: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0; font-size: 0.9rem; }
-                .back-link:hover { color: white; }
-                .header-content h2 { margin: 0 0 5px 0; font-size: 1.5rem; }
-
-                .route-stops-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
-                .stop-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid transparent; }
-                .stop-item.visited { opacity: 0.5; background: rgba(16, 185, 129, 0.05); }
-                .stop-number { width: 28px; height: 28px; background: var(--primary-color); color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
-                .stop-info { flex: 1; }
-                .stop-info h4 { margin: 0; font-size: 1rem; }
-                .stop-info p { margin: 2px 0 0 0; color: var(--text-dim); font-size: 0.85rem; }
-                .success-icon { color: #10b981; }
-
-                .detail-actions { display: flex; gap: 15px; justify-content: flex-end; }
-            `}} />
         </div>
     )
 }

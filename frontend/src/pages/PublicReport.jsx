@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Camera, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
+import './PublicReport.css'
 
 export default function PublicReport() {
     const { uid } = useParams()
@@ -178,49 +179,7 @@ export default function PublicReport() {
                 </button>
             </form>
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .report-page { 
-                    max-width: 480px; margin: 0 auto; min-height: 100vh; padding: 20px; 
-                    background: #0d1117; color: white; display: flex; flex-direction: column;
-                }
-                .success-view { alignItems: center; justify-content: center; text-align: center; }
-                .success-icon { color: #10b981; margin-bottom: 20px; }
-                .card-logo { margin-top: 40px; font-weight: 700; opacity: 0.5; }
 
-                .report-header { text-align: center; margin-bottom: 24px; }
-                .report-header h3 { margin: 0 0 8px 0; font-size: 1.5rem; }
-                .machine-badge { 
-                    background: rgba(255,255,255,0.1); display: inline-block; padding: 4px 12px; 
-                    border-radius: 20px; font-size: 0.9rem; color: #aaa;
-                }
-
-                .report-form { padding: 24px; border-radius: 16px; display: flex; flex-direction: column; gap: 20px; }
-                
-                .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #ccc; }
-                
-                .input-select, textarea {
-                    width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px;
-                    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
-                    color: white; font-size: 1rem;
-                }
-
-                .photo-upload-box {
-                    border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px;
-                    height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-                    color: #888; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
-                }
-                .photo-upload-box:hover { border-color: #10b981; color: #10b981; }
-                .photo-preview { width: 100%; height: 100%; object-fit: cover; }
-
-                .submit-btn {
-                    background: #10b981; color: black; border: none; padding: 16px; border-radius: 12px;
-                    font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: 0.2s;
-                }
-                .submit-btn:disabled { opacity: 0.7; }
-                .spin { animation: spin 1s linear infinite; }
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-            `}} />
         </div>
     )
 }

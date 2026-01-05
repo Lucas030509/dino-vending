@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { LogOut, LayoutGrid, Users, Plus, ShieldOff, ShieldCheck, DollarSign, Key } from 'lucide-react'
+import './AdminDashboard.css'
 
 export default function AdminDashboard({ session }) {
     const [tenants, setTenants] = useState([])
@@ -412,143 +413,7 @@ export default function AdminDashboard({ session }) {
                 </div>
             )}
 
-            <style>{`
-                :root {
-                    --admin-primary: #8b5cf6;
-                    --admin-bg: #0f172a;
-                    --glass-bg: rgba(30, 41, 59, 0.7);
-                    --glass-border: rgba(255, 255, 255, 0.1);
-                }
 
-                .admin-dashboard {
-                    padding: 30px;
-                    color: white;
-                    min-height: 100vh;
-                    background: radial-gradient(circle at top right, #312e81 0%, #0f172a 60%, #020617 100%);
-                    font-family: 'Inter', sans-serif;
-                }
-
-                /* GLASSMORPHISM UTILS */
-                .glass {
-                    background: var(--glass-bg);
-                    backdrop-filter: blur(12px);
-                    -webkit-backdrop-filter: blur(12px);
-                    border: 1px solid var(--glass-border);
-                    border-radius: 16px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                }
-
-                /* HEADER */
-                .admin-header {
-                    display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;
-                }
-                .brand h1 { font-size: 2rem; margin: 0; font-weight: 800; letter-spacing: -1px; }
-                .brand h1 span { color: var(--admin-primary); background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-                .badge-god { 
-                    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); 
-                    padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; 
-                    margin-left: 12px; vertical-align: middle; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
-                }
-
-                /* BUTTONS */
-                button { cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.9rem; border: none; outline: none; border-radius: 8px; }
-                button:active { transform: scale(0.98); }
-                
-                .btn-primary { 
-                    padding: 10px 20px; 
-                    display: flex; align-items: center; gap: 8px; 
-                    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); 
-                    color: white; 
-                    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-                }
-                .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4); }
-                
-                .btn-secondary { background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; }
-                .btn-secondary:hover { background: rgba(255,255,255,0.1); color: white; }
-
-                .logout-btn { 
-                    background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 8px 16px; border: 1px solid rgba(239, 68, 68, 0.2); 
-                    display: flex; gap: 8px; align-items: center;
-                }
-                .logout-btn:hover { background: #ef4444; color: white; }
-
-                /* STATS */
-                .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px; }
-                .stat-card { padding: 24px; align-items: flex-start; }
-                .stat-card .icon { margin-bottom: 16px; padding: 12px; border-radius: 12px; }
-                .icon.purple { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
-                .icon.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-                .icon.green { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-                .stat-content { display: flex; flex-direction: column; }
-                .stat-card .label { color: #94a3b8; font-size: 0.9rem; margin-bottom: 4px; }
-                .stat-card .value { font-size: 2rem; font-weight: 700; color: white; }
-
-                /* CONTENT & TABLE */
-                .content-section { padding: 30px; }
-                .section-header h2 { margin: 0; font-weight: 600; font-size: 1.25rem; }
-                
-                .table-responsive { overflow-x: auto; }
-                .admin-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-top: 10px; }
-                .admin-table th { text-align: left; color: #94a3b8; padding: 12px 16px; font-weight: 500; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-                .admin-table tbody tr { background: rgba(255,255,255,0.02); transition: background 0.2s; }
-                .admin-table tbody tr:hover { background: rgba(255,255,255,0.05); }
-                .admin-table td { padding: 16px; vertical-align: middle; }
-                .admin-table td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-                .admin-table td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
-                
-                .tenant-name { font-weight: 600; font-size: 1rem; color: #e2e8f0; }
-                .tenant-id { font-size: 0.75rem; color: #64748b; font-family: 'Courier New', monospace; opacity: 0.7; }
-                
-                .status-badge { 
-                    padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; 
-                    background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2);
-                }
-
-                .action-btn { 
-                    background: transparent; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; 
-                    border-radius: 6px; font-size: 0.85rem; border: 1px solid transparent;
-                }
-                .action-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
-
-                /* MODALS */
-                .modal-overlay {
-                    position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-                    display: flex; align-items: center; justify-content: center; z-index: 50;
-                }
-                .modal-content { width: 100%; max-width: 450px; padding: 30px; border: 1px solid rgba(255,255,255,0.15); animation: modalIn 0.3s ease-out; }
-                
-                @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-                .modal-content h3 { margin-top: 0; margin-bottom: 20px; font-size: 1.25rem; font-weight: 600; }
-                
-                .input-group { margin-bottom: 20px; }
-                .input-group label { display: block; color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
-                .admin-input {
-                    background: rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); 
-                    color: white; padding: 12px; border-radius: 8px; width: 100%; font-size: 0.95rem; transition: border-color 0.2s;
-                }
-                .admin-input:focus { outline: none; border-color: var(--admin-primary); background: rgba(0,0,0,0.3); }
-
-                .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; }
-                
-                /* CREDENTIALS BOX */
-                .credentials-box {
-                    background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px; border: 1px dashed #334155; margin-top: 20px;
-                }
-                .credential-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
-                .credential-row:last-child { margin-bottom: 0; }
-                .credential-row .label { color: #94a3b8; font-size: 0.9rem; }
-                .credential-row .value { 
-                    font-family: 'Courier New', monospace; color: #e2e8f0; background: rgba(255,255,255,0.05); 
-                    padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
-                }
-                .credential-row .value.highlight { color: #ffeb3b; border-color: rgba(253, 224, 71, 0.2); background: rgba(253, 224, 71, 0.1); font-weight: bold; }
-                
-                .success-icon-container {
-                    background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%;
-                    display: flex; align-items: center; justify-content: center; margin: 0 auto;
-                }
-            `}</style>
         </div>
     )
 }
