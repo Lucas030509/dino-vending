@@ -28,7 +28,7 @@ export default function RefillFormModal({ onClose, onSuccess }) {
             // Fetch machines to populate select
             const { data, error } = await supabase
                 .from('machines')
-                .select('id, location_name, capsule_capacity, current_stock_snapshot')
+                .select('id, location_name, capsule_capacity, current_stock_snapshot, tenant_id')
                 .eq('current_status', 'Active')
                 .order('location_name')
 
@@ -113,20 +113,23 @@ export default function RefillFormModal({ onClose, onSuccess }) {
             // 3. Insert into Collections (Kardex)
             const { data: { user } } = await supabase.auth.getUser()
 
+            if (!user) throw new Error("Sesión caducada")
+
             // Prepare payload
             const payload = {
                 machine_id: selectedMachine,
+                tenant_id: machineDetails.tenant_id,
                 collection_date: new Date().toISOString(),
-                user_id: user?.id, // Handle potential null if session lost
+                created_by: user.id,
                 record_type: 'refill',
                 inventory_refilled: quantityAdded,
                 stock_after_refill: newStockLevel,
                 profit_amount: 0
             }
 
-            // Only add photo_url if explicitly uploaded
+            // Only add evidence photo if uploaded
             if (photoUrl) {
-                payload.photo_url = photoUrl
+                payload.evidence_photo_url = photoUrl
             }
 
             const { error: dbError } = await supabase

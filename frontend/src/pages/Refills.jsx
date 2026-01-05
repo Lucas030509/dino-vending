@@ -116,8 +116,8 @@ export default function Refills() {
                                         </span>
                                     </td>
                                     <td>
-                                        {row.photo_url ? (
-                                            <a href={row.photo_url} target="_blank" rel="noopener noreferrer" className="photo-link">
+                                        {row.evidence_photo_url ? (
+                                            <a href={row.evidence_photo_url} target="_blank" rel="noopener noreferrer" className="photo-link">
                                                 Ver Foto ↗
                                             </a>
                                         ) : (
