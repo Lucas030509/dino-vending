@@ -392,6 +392,10 @@ export default function Dashboard({ isSuperAdmin }) {
             <span className="hide-mobile">Reportes</span>
             {pendingReports > 0 && <span className="notification-badge">{pendingReports}</span>}
           </button>
+          <button onClick={() => navigate('/refills')} className="nav-btn">
+            <Package size={20} />
+            <span className="hide-mobile">Inventario</span>
+          </button>
           <button onClick={handleLogout} className="logout-btn">
             <LogOut size={20} />
             <span className="hide-mobile">Salir</span>

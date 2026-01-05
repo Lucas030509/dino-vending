@@ -11,6 +11,7 @@ const RoutePlanner = React.lazy(() => import('./pages/RoutePlanner'))
 const Collections = React.lazy(() => import('./pages/Collections'))
 const PublicReport = React.lazy(() => import('./pages/PublicReport'))
 const Reports = React.lazy(() => import('./pages/Reports'))
+const Refills = React.lazy(() => import('./pages/Refills'))
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
 
 function App() {
@@ -94,6 +95,7 @@ function App() {
               <Route path="/routes" element={session ? <RoutePlanner /> : <Navigate to="/auth" />} />
               <Route path="/collections" element={session ? <Collections /> : <Navigate to="/auth" />} />
               <Route path="/reports" element={session ? <Reports /> : <Navigate to="/auth" />} />
+              <Route path="/refills" element={session ? <Refills /> : <Navigate to="/auth" />} />
               <Route path="/report/:uid" element={<PublicReport />} />
             </Routes>
           </Suspense>
