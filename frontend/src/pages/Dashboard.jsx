@@ -782,7 +782,7 @@ export default function Dashboard({ isSuperAdmin }) {
         onMouseEnter={(e) => e.target.style.opacity = 1}
         onMouseLeave={(e) => e.target.style.opacity = 0}
       >
-        v: 24.01.04-fix-crash
+        v: 24.01.04-update-ui
       </div>
     </div >
   )

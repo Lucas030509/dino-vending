@@ -7,6 +7,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+
 export default function Machines() {
     const [machines, setMachines] = useState([])
     const [filteredMachines, setFilteredMachines] = useState([])
@@ -43,7 +45,12 @@ export default function Machines() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [selectedIds, setSelectedIds] = useState(new Set())
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
     const qrPrintRef = useRef(null)
+
+    // Delete Modal State
+    const [machineToDelete, setMachineToDelete] = useState(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     // Address Search State (Nominatim)
     const [searchQuery, setSearchQuery] = useState('')
@@ -179,14 +186,27 @@ export default function Machines() {
             return
         }
 
-        if (!window.confirm(`¿Seguro que deseas eliminar la máquina "${machine.location_name}"?`)) return
+        setMachineToDelete(machine)
+    }
 
-        const { error } = await supabase.from('machines').delete().eq('id', machine.id)
-        if (error) {
-            showToast("Error al eliminar: " + error.message, 'error')
-        } else {
-            showToast("Máquina eliminada correctamente", 'success')
-            fetchMachines()
+    const handleConfirmDelete = async () => {
+        if (!machineToDelete) return
+        setIsDeleting(true)
+
+        try {
+            const { error } = await supabase.from('machines').delete().eq('id', machineToDelete.id)
+            if (error) {
+                showToast("Error al eliminar: " + error.message, 'error')
+            } else {
+                showToast("Máquina eliminada correctamente", 'success')
+                fetchMachines()
+            }
+        } catch (err) {
+            console.error(err)
+            showToast("Error inesperado al eliminar", 'error')
+        } finally {
+            setIsDeleting(false)
+            setMachineToDelete(null)
         }
     }
 
@@ -980,6 +1000,19 @@ export default function Machines() {
                     ))}
                 </div>
             </div>
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!machineToDelete}
+                onClose={() => setMachineToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Eliminar Máquina"
+                message={<span>¿Estás seguro de que deseas eliminar <strong>{machineToDelete?.location_name}</strong>? Esta acción no se puede deshacer.</span>}
+                confirmText="Sí, Eliminar"
+                cancelText="No, Cancelar"
+                isDestructive={true}
+                isLoading={isDeleting}
+            />
 
             <style dangerouslySetInnerHTML={{
                 __html: `
