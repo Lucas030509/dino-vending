@@ -107,7 +107,8 @@ export default function RefillFormModal({ onClose, onSuccess }) {
                 newStockLevel = capacity
             } else {
                 quantityAdded = parseInt(manualAmount) || 0
-                newStockLevel = current + quantityAdded
+                // Safety: Clamp to capacity
+                newStockLevel = Math.min(capacity, current + quantityAdded)
             }
 
             // 3. Insert into Collections (Kardex)

@@ -300,6 +300,29 @@ export default function Collections() {
 
             if (error) throw error
 
+            // 5. Update Machine Stock (Inventory Management)
+            try {
+                // Fetch fresh data to avoid race conditions
+                const { data: freshMachine } = await supabase
+                    .from('machines')
+                    .select('current_stock_snapshot')
+                    .eq('id', selectedMachine.id)
+                    .single()
+
+                if (freshMachine) {
+                    const currentStock = freshMachine.current_stock_snapshot || 0
+                    const newStock = Math.max(0, currentStock - units)
+
+                    await supabase
+                        .from('machines')
+                        .update({ current_stock_snapshot: newStock })
+                        .eq('id', selectedMachine.id)
+                }
+            } catch (invError) {
+                console.error("Error updating inventory:", invError)
+                // Don't block flow, just log
+            }
+
             // 4. Save Incident Report (if enabled)
             if (reportForm.enabled) {
                 const reportStatus = reportForm.remember ? 'pending' : 'resolved'

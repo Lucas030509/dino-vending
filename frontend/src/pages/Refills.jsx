@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Filter, Package, Calendar } from 'lucide-react'
+import { Plus, Filter, Package, Calendar, Camera } from 'lucide-react'
 import RefillFormModal from '../components/refills/RefillFormModal'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import './Refills.css'
@@ -111,9 +111,21 @@ export default function Refills() {
                                         </div>
                                     </td>
                                     <td>
-                                        <span className="refill-badge full">
-                                            {row.stock_after_refill} Total
-                                        </span>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span className="refill-badge full" style={{ width: 'fit-content' }}>
+                                                {row.stock_after_refill} Total
+                                            </span>
+                                            {/* Visual Bar for Desktop */}
+                                            <div className="desktop-stock-bar">
+                                                <div
+                                                    className="desktop-stock-fill"
+                                                    style={{
+                                                        width: `${Math.min(100, (row.stock_after_refill / 180) * 100)}%`,
+                                                        background: row.stock_after_refill < 50 ? '#ef4444' : '#10b981'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         {row.evidence_photo_url ? (
@@ -130,6 +142,54 @@ export default function Refills() {
                     </table>
                 </div>
             )}
+
+            {/* Mobile Card View (Hidden on Desktop) */}
+            <div className="refills-mobile-list">
+                {filteredHistory.map(row => (
+                    <div key={row.id} className="refill-card">
+                        <div className="card-top">
+                            <div className="card-info">
+                                <h4>{row.machines?.location_name || 'Máquina Eliminada'}</h4>
+                                <p><Calendar size={12} /> {new Date(row.collection_date).toLocaleDateString()} • {new Date(row.collection_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            {row.inventory_refilled > 50 ?
+                                <span className="card-status-badge" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>Full</span> :
+                                <span className="card-status-badge">Parcial</span>}
+                        </div>
+
+                        <div className="card-stats">
+                            <div className="stat-block">
+                                <label>Agregado</label>
+                                <div className="value" style={{ color: '#10b981' }}>+{row.inventory_refilled}</div>
+                            </div>
+                            <div className="stat-block">
+                                <label>Stock Final</label>
+                                <div className="value">
+                                    {row.stock_after_refill}
+                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 400 }}>/ 180</span>
+                                </div>
+                                <div className="stock-indicator-mobile">
+                                    <div
+                                        className="indicator-fill"
+                                        style={{
+                                            width: `${Math.min(100, (row.stock_after_refill / 180) * 100)}%`,
+                                            background: row.stock_after_refill < 50 ? '#ef4444' : '#10b981'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="card-actions">
+                            {row.evidence_photo_url ? (
+                                <a href={row.evidence_photo_url} target="_blank" rel="noopener noreferrer" className="photo-link">
+                                    <Camera size={14} /> Ver Evidencia
+                                </a>
+                            ) : <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Sin foto</span>}
+                        </div>
+                    </div>
+                ))}
+            </div>
 
             {showModal && (
                 <RefillFormModal
