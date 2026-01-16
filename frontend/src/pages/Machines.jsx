@@ -460,7 +460,7 @@ export default function Machines() {
             <section className="fleet-section">
                 <div className="toolbar-glass">
                     <div className="search-filter">
-                        <Search size={18} className="search-icon" />
+                        <Search size={18} className="machine-search-icon" />
                         <input
                             type="text"
                             placeholder="Buscar máquina (Nombre, UID, Dirección)..."

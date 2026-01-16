@@ -222,8 +222,10 @@
     font-size: 0.95rem;
 }
 
-.search-icon {
+.machine-search-icon {
     color: var(--text-dim);
+    /* Ensure no absolute positioning leaks */
+    position: static;
 }
 
 .select-all-icon-btn {
