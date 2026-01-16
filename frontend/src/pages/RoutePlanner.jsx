@@ -140,7 +140,7 @@ export default function RoutePlanner() {
             return query.includes('Mexico') ? query : `${query}, Mexico`
         }
 
-        const waypoints = targets
+        const waypoints = targets.slice(0, -1)
             .map(m => encodeURIComponent(getLocationForMaps(m)))
             .join('|')
 
