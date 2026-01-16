@@ -5,6 +5,8 @@ import { syncFromSupabase, processSyncQueue } from './lib/sync' // Import sync
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import SyncIndicator from './components/ui/SyncIndicator'
 
+import './App.css' // Global App Styles
+
 // Lazy Load Pages to optimize initial bundle (Fase 1 Audit)
 const Auth = React.lazy(() => import('./pages/Auth'))
 const Dashboard = React.lazy(() => import('./pages/Dashboard'))
@@ -137,14 +139,7 @@ function App() {
         </main>
       </div>
 
-      <style>{`
-        .layout {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          min-height: 100vh;
-        }
-      `}</style>
+
     </Router>
   )
 }

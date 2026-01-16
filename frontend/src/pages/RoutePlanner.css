@@ -623,8 +623,61 @@
     color: #10b981;
 }
 
-.detail-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: flex-end;
+/* ... existing code ... */
+
+/* Mobile Enhancements */
+@media (max-width: 768px) {
+    .route-page {
+        padding: 10px;
+        padding-bottom: 100px;
+        /* Space for bottom nav/sticky buttons */
+    }
+
+    .header-left {
+        flex-direction: row;
+        /* Keep arrow next to title */
+        gap: 12px;
+    }
+
+    .page-header h1 {
+        font-size: 1.4rem;
+    }
+
+    /* Disable hover effects for crucial actions so they are visible */
+    .route-actions {
+        opacity: 1;
+        position: static;
+        /* Stack properly */
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .route-card {
+        padding: 15px;
+    }
+
+    .stop-item {
+        padding: 12px;
+    }
+
+    .detail-actions {
+        flex-direction: column;
+    }
+
+    .detail-actions button {
+        width: 100%;
+        padding: 15px;
+        /* Large tap targets */
+    }
+
+    .planner-tabs {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+
+    .tab-btn {
+        flex-shrink: 0;
+    }
 }
