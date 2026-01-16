@@ -1,7 +1,9 @@
 import React, { useEffect, useState, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { syncFromSupabase } from './lib/sync' // Import sync
 import LoadingSpinner from './components/ui/LoadingSpinner'
+import SyncIndicator from './components/ui/SyncIndicator'
 
 // Lazy Load Pages to optimize initial bundle (Fase 1 Audit)
 const Auth = React.lazy(() => import('./pages/Auth'))
@@ -35,6 +37,13 @@ function App() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // GLobal Sync Trigger
+  useEffect(() => {
+    if (session) {
+      syncFromSupabase(); // Start sync in background
+    }
+  }, [session]);
 
   // Global Theme & Role Fetcher
   useEffect(() => {
@@ -82,6 +91,7 @@ function App() {
     <Router>
       <div className="layout">
         <main className="container">
+          <SyncIndicator />
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />

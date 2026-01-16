@@ -3,11 +3,17 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers, Save, List, Plus, Trash2, CheckCircle, Clock, Wand2 } from 'lucide-react'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import { db } from '../lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { addToSyncQueue } from '../lib/sync'
 import './RoutePlanner.css'
 
 export default function RoutePlanner() {
     // --- Existing State ---
-    const [machines, setMachines] = useState([])
+    // Offline: Read from Dexie instead of manual fetch
+    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray()) || []
+
+    // Derived state
     const [zones, setZones] = useState([])
     const [loading, setLoading] = useState(true)
     const [filterQuery, setFilterQuery] = useState('')
@@ -30,12 +36,20 @@ export default function RoutePlanner() {
     }
 
     useEffect(() => {
-        fetchMachines()
-        // Set default date to now
+        // Init logic
         const now = new Date()
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
         setScheduleDate(now.toISOString().slice(0, 16))
     }, [])
+
+    // Update zones when machines change (automatically handled by liveQuery)
+    useEffect(() => {
+        if (machines) {
+            const uniqueZones = [...new Set(machines.map(m => m.zone).filter(Boolean))]
+            setZones(uniqueZones)
+            setLoading(false)
+        }
+    }, [machines])
 
     useEffect(() => {
         if (activeTab === 'list') {
@@ -43,26 +57,7 @@ export default function RoutePlanner() {
         }
     }, [activeTab])
 
-    const fetchMachines = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('machines')
-                .select('*')
-                .eq('current_status', 'Active')
-                .order('location_name')
-
-            if (data) {
-                setMachines(data)
-                // Extract unique zones
-                const uniqueZones = [...new Set(data.map(m => m.zone).filter(Boolean))]
-                setZones(uniqueZones)
-            }
-        } catch (e) {
-            console.error(e)
-        } finally {
-            setLoading(false)
-        }
-    }
+    // Removed manual fetchMachines since we use useLiveQuery
 
     const fetchRoutes = async () => {
         setRoutesLoading(true)
@@ -268,29 +263,37 @@ export default function RoutePlanner() {
                 }
             }
 
-            const { data: route, error: routeError } = await supabase.from('routes').insert({
+            // Generate UUIDs locally since we might be offline
+            const routeId = crypto.randomUUID()
+            const routeData = {
+                id: routeId,
                 driver_id: user.id,
                 tenant_id: tenantId,
                 scheduled_date: scheduleDate.split('T')[0],
                 name: `Ruta ${new Date(scheduleDate).toLocaleDateString()}`,
-                status: 'scheduled'
-            }).select().single()
+                status: 'scheduled',
+                created_at: new Date().toISOString() // for local sorting
+            }
 
-            if (routeError) throw routeError
+            // 1. Add Route to Queue (and local DB)
+            await addToSyncQueue('routes', 'INSERT', routeData)
 
-            const stopsData = machines
+            // 2. Add Stops to Queue
+            const stops = machines
                 .filter(m => selectedIds.has(m.id))
                 .map((m, index) => ({
-                    route_id: route.id,
+                    id: crypto.randomUUID(),
+                    route_id: routeId,
                     machine_id: m.id,
                     stop_order: index + 1,
                     status: 'pending'
                 }))
 
-            const { error: stopsError } = await supabase.from('route_stops').insert(stopsData)
-            if (stopsError) throw stopsError
+            for (const stop of stops) {
+                await addToSyncQueue('route_stops', 'INSERT', stop)
+            }
 
-            showToast("Ruta guardada exitosamente", "success")
+            showToast("Ruta guardada exitosamente (Offline-Ready)", "success")
             setSelectedIds(new Set()) // Clear selection
             setActiveTab('list') // Switch to list view
         } catch (e) {
