@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, ArrowDownCircle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
-import { processSyncQueue } from '../../lib/sync';
 
-export default function SyncIndicator() {
+export default function SyncIndicator({ isDownloading }) {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     // Monitor queue size
     const pendingCount = useLiveQuery(() => db.sync_queue.where('status').equals('pending').count()) || 0;
 
     useEffect(() => {
-        const handleOnline = () => {
-            setIsOnline(true);
-            processSyncQueue(); // Trigger sync immediately on reconnect
-        };
+        const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
 
         window.addEventListener('online', handleOnline);
@@ -26,14 +22,8 @@ export default function SyncIndicator() {
         };
     }, []);
 
-    // Explicit sync processing trigger (if count > 0 and online)
-    useEffect(() => {
-        if (isOnline && pendingCount > 0) {
-            processSyncQueue();
-        }
-    }, [isOnline, pendingCount]);
-
-    if (pendingCount === 0 && isOnline) return null; // Hidden if everything is perfect
+    // 3 States: Offline, Downloading, Uploading (Syncing)
+    if (pendingCount === 0 && !isDownloading && isOnline) return null; // Hidden if perfect
 
     return (
         <div style={styles.container} className={isOnline ? 'sync-online' : 'sync-offline'}>
@@ -44,10 +34,17 @@ export default function SyncIndicator() {
                 </>
             )}
 
-            {isOnline && pendingCount > 0 && (
+            {isOnline && isDownloading && (
+                <>
+                    <ArrowDownCircle size={16} className="bounce" />
+                    <span>Bajando datos...</span>
+                </>
+            )}
+
+            {isOnline && !isDownloading && pendingCount > 0 && (
                 <>
                     <RefreshCw size={16} className="spin" />
-                    <span>Sincronizando {pendingCount} cambios...</span>
+                    <span>Subiendo {pendingCount} cambios...</span>
                 </>
             )}
 
@@ -55,9 +52,16 @@ export default function SyncIndicator() {
                 .spin {
                     animation: spin 1s linear infinite;
                 }
+                .bounce {
+                    animation: bounce 1s infinite;
+                }
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-3px); }
                 }
             `}</style>
         </div>

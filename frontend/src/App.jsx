@@ -1,7 +1,7 @@
 import React, { useEffect, useState, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import { syncFromSupabase } from './lib/sync' // Import sync
+import { syncFromSupabase, processSyncQueue } from './lib/sync' // Import sync
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import SyncIndicator from './components/ui/SyncIndicator'
 
@@ -20,6 +20,7 @@ function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState(null)
+  const [isDownloading, setIsDownloading] = useState(false) // New Global State
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,12 +39,35 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // GLobal Sync Trigger
+  // GLobal Sync Trigger (Download + Queue Processing)
+  const handleGlobalSync = async () => {
+    if (!session) return;
+    try {
+      if (navigator.onLine) {
+        setIsDownloading(true); // Show "Downloading" UI
+        await syncFromSupabase(); // Download fresh data
+        await processSyncQueue(); // Upload pending data
+      }
+    } catch (e) {
+      console.error("Global sync failed:", e)
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  // Initial Sync on Load
   useEffect(() => {
     if (session) {
-      syncFromSupabase(); // Start sync in background
+      handleGlobalSync();
     }
   }, [session]);
+
+  // Sync on Reconnect
+  useEffect(() => {
+    const handleOnline = () => handleGlobalSync();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [session]); // Re-bind if session changes
 
   // Global Theme & Role Fetcher
   useEffect(() => {
@@ -91,7 +115,8 @@ function App() {
     <Router>
       <div className="layout">
         <main className="container">
-          <SyncIndicator />
+          {/* Pass Global Downloading State */}
+          <SyncIndicator isDownloading={isDownloading} />
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" />} />
