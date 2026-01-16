@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers, Save, List, Plus, Trash2, CheckCircle, Clock } from 'lucide-react'
+import { ArrowLeft, Map, Calendar, CheckSquare, Square, Search, Navigation, Layers, Save, List, Plus, Trash2, CheckCircle, Clock, Wand2 } from 'lucide-react'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
 import './RoutePlanner.css'
 
@@ -121,6 +121,7 @@ export default function RoutePlanner() {
                 showToast("Selecciona al menos una máquina", "error")
                 return
             }
+            // Use current order of machines (which might be optimized)
             targets = machines.filter(m => selectedIds.has(m.id))
         }
 
@@ -150,6 +151,94 @@ export default function RoutePlanner() {
         const url = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destination}&waypoints=${waypoints}`
         window.open(url, '_blank')
         showToast("Ruta abierta en Google Maps (Optimizado)", "success")
+    }
+
+    const handleOptimizeRoute = () => {
+        if (selectedIds.size < 2) {
+            showToast("Selecciona al menos 2 máquinas para optimizar", "warning")
+            return
+        }
+
+        if (!navigator.geolocation) {
+            showToast("Geolocalización no soportada", "error")
+            return
+        }
+
+        setIsProcessing(true)
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords
+
+                // 1. Get selected objects
+                const selectedMachines = machines.filter(m => selectedIds.has(m.id))
+                const unselectedMachines = machines.filter(m => !selectedIds.has(m.id))
+
+                // Helper: Parse Lat/Lon from maps_url
+                const getCoords = (m) => {
+                    if (m.maps_url && m.maps_url.includes('q=')) {
+                        try {
+                            const [lat, lon] = m.maps_url.split('q=')[1].split('&')[0].split(',')
+                            return { lat: parseFloat(lat), lon: parseFloat(lon) }
+                        } catch (e) { return null }
+                    }
+                    return null
+                }
+
+                // Helper: Distance (Haversine/Euclidean approximation)
+                const getDist = (p1, p2) => {
+                    return Math.sqrt(Math.pow(p1.lat - p2.lat, 2) + Math.pow(p1.lon - p2.lon, 2))
+                }
+
+                // 2. Nearest Neighbor Algorithm
+                let currentPos = { lat: latitude, lon: longitude }
+                let pool = selectedMachines.map(m => ({ ...m, coords: getCoords(m) })).filter(m => m.coords) // filtering those with coords
+
+                // Keep those without coords at the end of optimization
+                const noCoordsPool = selectedMachines.filter(m => !getCoords(m))
+
+                const sorted = []
+
+                while (pool.length > 0) {
+                    let nearest = null
+                    let minFreeDist = Infinity
+                    let nearestIdx = -1
+
+                    for (let i = 0; i < pool.length; i++) {
+                        const d = getDist(currentPos, pool[i].coords)
+                        if (d < minFreeDist) {
+                            minFreeDist = d
+                            nearest = pool[i]
+                            nearestIdx = i
+                        }
+                    }
+
+                    if (nearest) {
+                        sorted.push(nearest)
+                        currentPos = nearest.coords // Move current position to this stop
+                        pool.splice(nearestIdx, 1)
+                    } else {
+                        break // Should not happen
+                    }
+                }
+
+                // 3. Reconstruct State
+                // Put optimized first, then those with no coords, then unselected
+                const newOrder = [...sorted, ...noCoordsPool, ...unselectedMachines]
+
+                // Important: We need to preserve original object references or just re-sort
+                // Since we created new objects in 'pool', let's match by ID
+                const finalSorted = newOrder.map(n => machines.find(m => m.id === n.id))
+
+                setMachines(finalSorted)
+                setIsProcessing(false)
+                showToast("Ruta optimizada con éxito 🪄", "success")
+            },
+            (error) => {
+                console.error(error)
+                setIsProcessing(false)
+                showToast("Error obteniendo ubicación GPS", "error")
+            }
+        )
     }
 
     const handleSaveRoute = async () => {
@@ -342,6 +431,17 @@ export default function RoutePlanner() {
                                 <strong>~ {selectedIds.size * 20} min</strong>
                                 <small>(20min por punto)</small>
                             </div>
+
+                            {selectedIds.size > 1 && (
+                                <button
+                                    className="optimize-btn"
+                                    onClick={handleOptimizeRoute}
+                                    disabled={isProcessing}
+                                >
+                                    <Wand2 size={16} />
+                                    {isProcessing ? 'Calculando...' : 'Optimizar Ruta (AI)'}
+                                </button>
+                            )}
                         </div>
 
                         <div className="actions-stack">
