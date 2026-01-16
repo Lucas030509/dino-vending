@@ -6,14 +6,19 @@ import SignatureCanvas from 'react-signature-canvas'
 import { getMexicoCityDate, formatDateDDMMYYYY } from '../utils/formatters'
 import { CollectionModal } from '../components/collections/CollectionModal'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import { db } from '../lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import './Collections.css'
 
 export default function Collections() {
-    const [machines, setMachines] = useState([])
+    // Offline Data
+    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray()) || []
+    const collections = useLiveQuery(() => db.collections.orderBy('collection_date').reverse().limit(50).toArray()) || []
+
     const [filteredMachines, setFilteredMachines] = useState([])
     const [filterQuery, setFilterQuery] = useState('')
-    const [collections, setCollections] = useState([])
-    const [loading, setLoading] = useState(true)
+    // const [collections, setCollections] = useState([]) // Replaced by liveQuery
+    const [loading, setLoading] = useState(false)
     const [selectedMachine, setSelectedMachine] = useState(null)
     const [showModal, setShowModal] = useState(false)
     const [collectionToDelete, setCollectionToDelete] = useState(null)
@@ -84,10 +89,6 @@ export default function Collections() {
 
     const profitAmount = (parseFloat(newCollection.gross_amount || 0) - commissionAmount - totalExpenses)
 
-    useEffect(() => {
-        fetchData()
-    }, [])
-
     // Filter effect
     useEffect(() => {
         if (!filterQuery) {
@@ -103,35 +104,10 @@ export default function Collections() {
         }
     }, [filterQuery, machines])
 
-    const fetchData = async () => {
-        setLoading(true)
-        try {
-            // Fetch Machines
-            const { data: machinesData } = await supabase
-                .from('machines')
-                .select('*')
-                .eq('current_status', 'Active')
-                .order('location_name')
+    // Removed manual fetchData useEffect
 
-            // Fetch Recent Collections
-            const { data: collectionsData } = await supabase
-                .from('collections')
-                .select(`
-          *,
-          machines (location_name)
-        `)
-                .order('collection_date', { ascending: false })
-                .limit(20)
+    // Removed manual fetchData function
 
-            setMachines(machinesData || [])
-            setFilteredMachines(machinesData || [])
-            setCollections(collectionsData || [])
-        } catch (error) {
-            console.error('Error loading data:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
 
     // Helper: Smart Date Calculation (Skip Closed Days)
     const calculateSmartNextDate = (startDateStr, daysToAdd, closedDays = []) => {
@@ -354,7 +330,9 @@ export default function Collections() {
             }
 
             setShowModal(false)
-            fetchData() // Refresh list
+            setShowModal(false)
+            // fetchData() // Refresh handled by liveQuery automatically
+
 
         } catch (err) {
             console.error('Error recording collection:', err)
@@ -383,7 +361,6 @@ export default function Collections() {
                 console.error('Error deleting collection:', error)
                 showToast('Error al eliminar', 'error')
             } else {
-                fetchData() // Assuming fetchData also refreshes collections
                 showToast('Corte eliminado correctamente', 'success')
             }
         } catch (err) {

@@ -3,40 +3,25 @@ import { supabase } from '../lib/supabase'
 import { Plus, Filter, Package, Calendar, Camera } from 'lucide-react'
 import RefillFormModal from '../components/refills/RefillFormModal'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { db } from '../lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 import './Refills.css'
 
 export default function Refills() {
-    const [history, setHistory] = useState([])
-    const [loading, setLoading] = useState(true)
+    // Offline: Read from Dexie
+    const history = useLiveQuery(() =>
+        db.collections
+            .where('record_type').equals('refill')
+            .reverse() // Sort by ID desc usually, or we can use sortBy('collection_date') if indexed
+            .sortBy('collection_date')
+            .then(items => items.reverse()) // descending
+    ) || []
+
+    const [loading, setLoading] = useState(false) // liveQuery handles initial load implicitly
     const [showModal, setShowModal] = useState(false)
     const [filterMachine, setFilterMachine] = useState('')
 
-    useEffect(() => {
-        fetchHistory()
-    }, [])
-
-    const fetchHistory = async () => {
-        try {
-            // We query 'collections' but filter for 'refill' type
-            // Join with machines to get name
-            const { data, error } = await supabase
-                .from('collections')
-                .select(`
-                    *,
-                    machines (location_name, address)
-                `)
-                .eq('record_type', 'refill')
-                .order('collection_date', { ascending: false })
-                .limit(50) // Paginate ideally, but limit for now
-
-            if (error) throw error
-            setHistory(data || [])
-        } catch (error) {
-            console.error(error)
-        } finally {
-            setLoading(false)
-        }
-    }
+    // Removed fetchHistory useEffect as useLiveQuery is reactive
 
     const filteredHistory = history.filter(item =>
         filterMachine ? item.machines?.location_name.toLowerCase().includes(filterMachine.toLowerCase()) : true
@@ -195,7 +180,7 @@ export default function Refills() {
                 <RefillFormModal
                     onClose={() => setShowModal(false)}
                     onSuccess={() => {
-                        fetchHistory() // Refresh list
+                        // No need to fetchHistory, liveQuery updates auto
                     }}
                 />
             )}

@@ -68,6 +68,35 @@ export async function syncFromSupabase() {
             }
         }
 
+        // 5. Fetch Collections (Refills & Cuts) - Limit 100
+        const { data: collections, error: collError } = await supabase
+            .from('collections')
+            .select('*, machines(location_name, address)') // Include JOIN for local display
+            .eq('tenant_id', tenantId)
+            .order('collection_date', { ascending: false })
+            .limit(100);
+
+        if (collections && !collError) {
+            // Flatten the joined data slightly for easier indexing/usage if needed, 
+            // but Dexie stores raw objects fine. We might need to handle the join manually in UI or store flat.
+            // For simplicity, store as is.
+            await bulkSave('collections', collections);
+            console.log(`✅ Synced ${collections.length} collections`);
+        }
+
+        // 6. Fetch Pending Reports
+        const { data: reports, error: repError } = await supabase
+            .from('reports')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .in('status', ['pending', 'in_progress'])
+            .limit(50);
+
+        if (reports && !repError) {
+            await bulkSave('reports', reports);
+            console.log(`✅ Synced ${reports.length} reports`);
+        }
+
     } catch (e) {
         console.error("Sync failed:", e);
     }
