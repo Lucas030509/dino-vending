@@ -298,6 +298,13 @@
     margin-bottom: 32px;
 }
 
+@media (max-width: 600px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        /* Stack stats on mobile */
+    }
+}
+
 .stat-card {
     padding: 20px;
     display: flex;

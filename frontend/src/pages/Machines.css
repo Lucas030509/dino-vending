@@ -277,10 +277,24 @@
 }
 
 /* Grid */
+/* Grid */
 .machine-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .machine-grid {
+        grid-template-columns: 1fr;
+        /* Force single column on mobile */
+        gap: 15px;
+    }
+
+    .machines-page {
+        padding: 10px;
+        /* Reduce padding on mobile */
+    }
 }
 
 .machine-card {
