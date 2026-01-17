@@ -27,7 +27,20 @@ export async function syncFromSupabase() {
 
         console.log("🔄 Starting Sync for Tenant:", tenantId);
 
-        // 2. Fetch Machines
+        // 1.5 Fetch Locations (New Architecture)
+        const { data: locations, error: locError } = await supabase
+            .from('locations')
+            .select('id, name, address, district, tenant_id')
+            .eq('tenant_id', tenantId);
+
+        if (locations && !locError) {
+            await bulkSave('locations', locations);
+            console.log(`✅ Synced ${locations.length} locations`);
+        } else if (locError) {
+            console.error("Error syncing locations", locError);
+        }
+
+        // 2. Fetch Machines (Now linked to Locations)
         const { data: machines, error: machinesError } = await supabase
             .from('machines')
             .select('*')

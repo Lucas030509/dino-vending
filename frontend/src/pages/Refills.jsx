@@ -10,6 +10,7 @@ import './Refills.css'
 
 export default function Refills() {
     // Offline Data
+    const locationsData = useLiveQuery(() => db.locations.toArray())
     const machinesData = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
     const historyData = useLiveQuery(() =>
         db.collections
@@ -19,46 +20,87 @@ export default function Refills() {
             .then(items => items.reverse())
     )
 
+    const locations = locationsData || []
     const machines = machinesData || []
     const history = historyData || []
-    const isLoadingData = !machinesData || !historyData
+    const isLoadingData = !locationsData || !machinesData || !historyData
 
     const [viewMode, setViewMode] = useState('list') // 'list' or 'history'
     const [filterQuery, setFilterQuery] = useState('')
-    const [filteredMachines, setFilteredMachines] = useState([])
+
+    // Group Machines by Location
+    const [groupedLocations, setGroupedLocations] = useState([])
+    const [filteredLocations, setFilteredLocations] = useState([])
+
+    useEffect(() => {
+        if (!locations.length && !machines.length) return
+
+        const joined = locations.map(loc => {
+            const myMachines = machines.filter(m => m.location_id === loc.id)
+            const totalCap = myMachines.reduce((acc, m) => acc + (m.capsule_capacity || 180), 0)
+            const currentStock = myMachines.reduce((acc, m) => acc + (m.current_stock_snapshot || 0), 0)
+
+            return {
+                ...loc,
+                machines: myMachines,
+                total_machines: myMachines.length,
+                total_capacity: totalCap,
+                current_total_stock: currentStock,
+                fill_percentage: totalCap > 0 ? (currentStock / totalCap) * 100 : 0
+            }
+        })
+
+        // Handle Orphans (Legacy Data Support)
+        const orphans = machines.filter(m => !m.location_id)
+        if (orphans.length > 0) {
+            const totalCap = orphans.reduce((acc, m) => acc + (m.capsule_capacity || 180), 0)
+            const currentStock = orphans.reduce((acc, m) => acc + (m.current_stock_snapshot || 0), 0)
+            joined.push({
+                id: 'orphan',
+                name: '⚠️ Sin Ubicación',
+                address: 'Requiere actualizar datos en sección Máquinas',
+                machines: orphans,
+                total_machines: orphans.length,
+                total_capacity: totalCap,
+                current_total_stock: currentStock,
+                fill_percentage: totalCap > 0 ? (currentStock / totalCap) * 100 : 0,
+                is_orphan: true
+            })
+        }
+
+        setGroupedLocations(joined)
+    }, [locations, machines])
 
     // Modal State
     const [showModal, setShowModal] = useState(false)
-    const [selectedMachine, setSelectedMachine] = useState(null)
+    const [selectedLocation, setSelectedLocation] = useState(null)
     const [filterHistoryMachine, setFilterHistoryMachine] = useState('')
 
-    // Filter Logic for Machines List
+    // Filter Logic for Locations List
     useEffect(() => {
         if (!filterQuery) {
-            setFilteredMachines(machines)
+            setFilteredLocations(groupedLocations)
         } else {
             const query = filterQuery.toLowerCase()
-            const filtered = machines.filter(m =>
-                (m.location_name && m.location_name.toLowerCase().includes(query)) ||
-                (m.qr_code_uid && m.qr_code_uid.toLowerCase().includes(query)) ||
-                (m.address && m.address.toLowerCase().includes(query))
+            const filtered = groupedLocations.filter(loc =>
+                (loc.name && loc.name.toLowerCase().includes(query)) ||
+                (loc.address && loc.address.toLowerCase().includes(query))
             )
-            setFilteredMachines(filtered)
+            setFilteredLocations(filtered)
         }
-    }, [filterQuery, machines])
+    }, [filterQuery, groupedLocations])
 
     // Filter Logic for History
     const filteredHistory = history.filter(item =>
         filterHistoryMachine ? item.machines?.location_name.toLowerCase().includes(filterHistoryMachine.toLowerCase()) : true
     )
 
-    const handleOpenRefillModal = (machine) => {
-        setSelectedMachine(machine)
-        setShowModal(true)
-    }
-
-    const handleOpenGeneralModal = () => {
-        setSelectedMachine(null)
+    const handleOpenRefillModal = (location) => {
+        if (location.is_orphan) {
+            alert("Estas máquinas no tienen una ubicación asignada. Por favor ve a la pestaña Máquinas y edítalas para asignarles una ubicación.")
+            return
+        }
+        setSelectedLocation(location)
         setShowModal(true)
     }
 
@@ -96,11 +138,11 @@ export default function Refills() {
 
             <div className="main-content-area" style={{ display: 'block' }}>
                 {viewMode === 'list' ? (
-                    /* Left Panel: Active Machines to Service */
+                    /* Left Panel: Active Locations to Service */
                     <div className="panel machine-list-panel glass" style={{ width: '100%', maxWidth: 'none' }}>
                         <div className="panel-header">
-                            <h3>Máquinas Activas</h3>
-                            <span className="badge">{filteredMachines.length} Puntos</span>
+                            <h3>Puntos de Venta (Locaciones)</h3>
+                            <span className="badge">{filteredLocations.length} Puntos</span>
                         </div>
 
                         <div className="search-box-container">
@@ -115,26 +157,31 @@ export default function Refills() {
                         </div>
 
                         <div className="scrollable-list" style={{ maxHeight: 'none' }}>
-                            {filteredMachines.map(machine => (
+                            {filteredLocations.map(location => (
                                 <div
-                                    key={machine.id}
+                                    key={location.id}
                                     className="machine-item glass-hover"
-                                    onClick={() => handleOpenRefillModal(machine)}
+                                    onClick={() => handleOpenRefillModal(location)}
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <div className="m-info">
-                                        <h4>{machine.location_name}</h4>
+                                        <h4>{location.name}</h4>
                                         <p className="sub-text">
-                                            {machine.qr_code_uid} •
-                                            Stock: {machine.current_stock_snapshot || 0} / {(machine.capsule_capacity || 180) * (machine.machine_count || 1)} cap.
+                                            Stock Total: {location.current_total_stock || 0} / {location.total_capacity || 0} capsules
+                                            <span style={{ marginLeft: 6, color: location.fill_percentage < 30 ? '#ef4444' : '#94a3b8' }}>
+                                                ({location.fill_percentage.toFixed(0)}%)
+                                            </span>
                                         </p>
                                     </div>
-                                    <div className="action-btn-icon" title="Registrar Relleno" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                                    <div className="stock-indicator-mini" style={{ width: 60, height: 6, background: '#334155', borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
+                                        <div style={{ width: `${location.fill_percentage}%`, height: '100%', background: location.fill_percentage < 30 ? '#ef4444' : '#10b981' }}></div>
+                                    </div>
+                                    <div className="action-btn-icon" title="Registrar Relleno" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', marginLeft: 'auto' }}>
                                         <Package size={24} />
                                     </div>
                                 </div>
                             ))}
-                            {filteredMachines.length === 0 && (
+                            {filteredLocations.length === 0 && (
                                 <div className="empty-search-state">
                                     <p>No se encontraron resultados.</p>
                                 </div>
@@ -291,7 +338,7 @@ export default function Refills() {
 
             {showModal && (
                 <RefillFormModal
-                    preSelectedMachine={selectedMachine}
+                    location={selectedLocation}
                     onClose={() => setShowModal(false)}
                     onSuccess={() => {
                         // Success toast handled by modal or parent

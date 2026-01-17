@@ -1,80 +1,56 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { X, Camera, Package, AlertCircle } from 'lucide-react'
-import '../../pages/Refills.css' // Reuse styles
+import { X, Camera, Package, AlertCircle, Check, ArrowRight } from 'lucide-react'
+import '../../pages/Refills.css'
 
-export default function RefillFormModal({ onClose, onSuccess, preSelectedMachine }) {
-    const [machines, setMachines] = useState([])
-    const [selectedMachine, setSelectedMachine] = useState('')
-    const [loading, setLoading] = useState(true)
+export default function RefillFormModal({ onClose, onSuccess, location }) {
     const [submitting, setSubmitting] = useState(false)
-
-    // Form State
-    const [refillType, setRefillType] = useState('full') // 'full' or 'partial'
-    const [manualAmount, setManualAmount] = useState('')
     const [photo, setPhoto] = useState(null)
     const [photoPreview, setPhotoPreview] = useState('')
 
-    // Calculated Values
-    const [machineDetails, setMachineDetails] = useState(null)
-    const [estimatedFill, setEstimatedFill] = useState(0)
+    // State: Map { machineId: { add_amount: '', is_full: false, current: 0, capacity: 180 } }
+    const [refillMap, setRefillMap] = useState({})
+
+    const machines = location?.machines || []
 
     useEffect(() => {
-        if (preSelectedMachine) {
-            // If passed explicitly, use it and skip fetch if we want, 
-            // but we might still want to fetch others if user changes mind? 
-            // Actually UX says "Directly on machine", so we lock it.
-            setSelectedMachine(preSelectedMachine.id)
-            setMachineDetails(preSelectedMachine)
+        if (!machines.length) return
 
-            const count = preSelectedMachine.machine_count || 1;
-            const unitCapacity = preSelectedMachine.capsule_capacity || 180;
-            const totalCapacity = unitCapacity * count;
-            const current = preSelectedMachine.current_stock_snapshot || 0
-
-            setEstimatedFill(Math.max(0, totalCapacity - current))
-            setLoading(false) // No need to fetch machines list
-        } else {
-            fetchMachines()
-        }
-    }, [preSelectedMachine])
-
-    const fetchMachines = async () => {
-        try {
-            // Fetch machines to populate select
-            const { data, error } = await supabase
-                .from('machines')
-                .select('id, location_name, capsule_capacity, current_stock_snapshot, tenant_id, machine_count')
-                .eq('current_status', 'Active')
-                .order('location_name')
-
-            if (error) throw error
-            setMachines(data || [])
-        } catch (error) {
-            console.error(error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const handleMachineSelect = (e) => {
-        const id = e.target.value
-        setSelectedMachine(id)
-
-        if (id) {
-            const m = machines.find(mac => mac.id === id)
-            setMachineDetails(m)
-            // Calculate heuristic: If Full, we refill (Capacity * Count - Current)
-            const count = m.machine_count || 1;
-            const unitCapacity = m.capsule_capacity || 180;
-            const totalCapacity = unitCapacity * count;
-
+        const initialMap = {}
+        machines.forEach(m => {
             const current = m.current_stock_snapshot || 0
-            setEstimatedFill(Math.max(0, totalCapacity - current))
-        } else {
-            setMachineDetails(null)
-            setEstimatedFill(0)
-        }
+            const cap = m.capsule_capacity || 180 // Per machine physical capacity
+            initialMap[m.id] = {
+                id: m.id,
+                name: m.nickname || m.product_type || `Máquina ${m.id.substring(0, 4)}`,
+                current: current,
+                capacity: cap,
+                add_amount: '', // User input
+                is_full: false,
+                estimated_max_add: Math.max(0, cap - current)
+            }
+        })
+        setRefillMap(initialMap)
+    }, [machines])
+
+    const handleUpdate = (id, field, value) => {
+        setRefillMap(prev => {
+            const current = prev[id]
+            const updated = { ...current, [field]: value }
+
+            // Logic: If 'is_full' toggled ON, set add_amount to estimated need
+            if (field === 'is_full' && value === true) {
+                updated.add_amount = current.estimated_max_add
+            }
+            // Logic: If 'is_full' toggled OFF, clear amount? Or keep? Let's clear for clarity.
+            if (field === 'is_full' && value === false) {
+                updated.add_amount = ''
+            }
+            // Logic: If manual amount entered, uncheck is_full if it doesn't match max?
+            // checking strictly might be annoying. Let's just trust user input.
+
+            return { ...prev, [id]: updated }
+        })
     }
 
     const handlePhotoChange = (e) => {
@@ -87,95 +63,66 @@ export default function RefillFormModal({ onClose, onSuccess, preSelectedMachine
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        if (!selectedMachine) return
         setSubmitting(true)
 
         try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error("Sesión caducada")
+
+            // 1. Upload Shared Photo
             let photoUrl = null
-
-            // 1. Upload Photo
             if (photo) {
-                const fileExt = photo.name.split('.').pop()
-                const fileName = `refill-${selectedMachine}-${Date.now()}.${fileExt}`
-
-                // Assuming we reuse the 'collections-photos' bucket or similar
-                // If not, 'report-photos' works as a generic evidence bucket
+                const timestamp = Date.now()
+                const fileName = `${user.user_metadata.tenant_id}/${location.id}/${timestamp}_refill.jpg`
                 const { error: uploadError } = await supabase.storage
-                    .from('evidence-photos') // Use a generic bucket if possible, or create one
+                    .from('collection-evidence') // Check consistency with Collections.jsx
                     .upload(fileName, photo)
 
                 if (!uploadError) {
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('evidence-photos')
+                    const { data } = supabase.storage
+                        .from('collection-evidence')
                         .getPublicUrl(fileName)
-                    photoUrl = publicUrl
-                } else {
-                    console.warn("Photo upload failed, proceeding without photo", uploadError)
+                    photoUrl = data.publicUrl
                 }
             }
 
-            // 2. Calculate final numbers
-            const count = machineDetails.machine_count || 1;
-            const unitCapacity = machineDetails.capsule_capacity || 180;
-            const totalCapacity = unitCapacity * count;
-            const current = machineDetails.current_stock_snapshot || 0
+            // 2. Process Updates
+            const updates = Object.values(refillMap).map(async (item) => {
+                const added = parseInt(item.add_amount)
+                if (!added || added <= 0) return // Skip if nothing added
 
-            let quantityAdded = 0
-            let newStockLevel = 0
+                const newStock = Math.min(item.capacity, item.current + added)
+                const machine = machines.find(m => m.id === item.id)
 
-            if (refillType === 'full') {
-                quantityAdded = Math.max(0, totalCapacity - current)
-                newStockLevel = totalCapacity
-            } else {
-                quantityAdded = parseInt(manualAmount) || 0
-                // Safety: Clamp to total capacity
-                newStockLevel = Math.min(totalCapacity, current + quantityAdded)
-            }
-
-            // 3. Insert into Collections (Kardex)
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (!user) throw new Error("Sesión caducada")
-
-            // Prepare payload
-            const payload = {
-                machine_id: selectedMachine,
-                tenant_id: machineDetails.tenant_id,
-                collection_date: new Date().toISOString(),
-                created_by: user.id,
-                record_type: 'refill',
-                inventory_refilled: quantityAdded,
-                stock_after_refill: newStockLevel,
-                profit_amount: 0
-            }
-
-            // Only add evidence photo if uploaded
-            if (photoUrl) {
-                payload.evidence_photo_url = photoUrl
-            }
-
-            const { error: dbError } = await supabase
-                .from('collections')
-                .insert(payload)
-
-            if (dbError) throw dbError
-
-            // 4. Update Machine Snapshot
-            // This is crucial for the "Smart Logic" to work next time
-            await supabase
-                .from('machines')
-                .update({
-                    current_stock_snapshot: newStockLevel,
-                    last_refill_date: new Date().toISOString()
+                // Insert Record
+                await supabase.from('collections').insert({
+                    tenant_id: machine.tenant_id,
+                    location_id: location.id, // NEW
+                    machine_id: machine.id,
+                    collection_date: new Date().toISOString(),
+                    created_by: user.id,
+                    record_type: 'refill', // Crucial to distinguish
+                    inventory_refilled: added,
+                    stock_after_refill: newStock,
+                    profit_amount: 0,
+                    evidence_photo_url: photoUrl
                 })
-                .eq('id', selectedMachine)
+
+                // Update Machine Snapshot
+                await supabase.from('machines').update({
+                    current_stock_snapshot: newStock,
+                    last_refill_date: new Date().toISOString()
+                }).eq('id', machine.id)
+            })
+
+            await Promise.all(updates)
 
             onSuccess()
             onClose()
 
         } catch (error) {
             console.error(error)
-            alert("Error al registrar relleno: " + error.message)
+            alert("Error: " + error.message)
         } finally {
             setSubmitting(false)
         }
@@ -183,114 +130,80 @@ export default function RefillFormModal({ onClose, onSuccess, preSelectedMachine
 
     return (
         <div className="modal-overlay">
-            <div className="glass modal-content" style={{ maxWidth: '500px' }}>
+            <div className="glass modal-content" style={{ maxWidth: '600px' }}>
                 <div className="refills-header">
-                    <h3 style={{ margin: 0 }}>Registrar Relleno (Refill)</h3>
+                    <div>
+                        <h3 style={{ margin: 0 }}>Relleno: {location?.name}</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>{location?.address}</p>
+                    </div>
                     <button onClick={onClose} className="btn-secondary icon-only"><X size={20} /></button>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="field-group">
-                        <label>Máquina Seleccionada</label>
-                        {preSelectedMachine ? (
-                            <input
-                                type="text"
-                                className="refill-input"
-                                value={preSelectedMachine.location_name}
-                                disabled
-                                style={{ background: '#f1f5f9', color: '#475569' }}
-                            />
-                        ) : (
-                            <select
-                                className="refill-input"
-                                value={selectedMachine}
-                                onChange={handleMachineSelect}
-                                required
-                            >
-                                <option value="">-- Elige una máquina --</option>
-                                {machines.map(m => (
-                                    <option key={m.id} value={m.id}>{m.location_name}</option>
-                                ))}
-                            </select>
-                        )}
-                    </div>
-
-                    {machineDetails && (
-                        <div className="stock-preview">
-                            <Package size={24} color="#fbbf24" strokeWidth={1.5} />
-                            <div className="stock-info">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '4px' }}>
-                                    <span style={{ color: '#94a3b8' }}>Nivel Actual</span>
-                                    <span>{machineDetails.current_stock_snapshot || 0} / {(machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1)}</span>
+                    <div className="machines-refill-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
+                        {Object.values(refillMap).map(item => (
+                            <div key={item.id} className="machine-refill-item glass" style={{ padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{item.name}</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Cap: {item.capacity} | Actual: {item.current}</span>
                                 </div>
-                                <div className="stock-bar-bg">
-                                    <div
-                                        className="stock-bar-fill"
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'end' }}>
+                                    {/* Manual Input */}
+                                    <div className="field-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.75rem' }}>Cantidad a Agregar</label>
+                                        <input
+                                            type="number"
+                                            className="refill-input compact"
+                                            value={item.add_amount}
+                                            onChange={e => handleUpdate(item.id, 'add_amount', e.target.value)}
+                                            placeholder="0"
+                                            style={{ padding: '8px' }}
+                                        />
+                                    </div>
+
+                                    {/* Toggle Full */}
+                                    <button
+                                        type="button"
+                                        className={`btn-secondary ${item.is_full ? 'active-success' : ''}`}
                                         style={{
-                                            width: `${Math.min(100, ((machineDetails.current_stock_snapshot || 0) / ((machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1))) * 100)}%`,
-                                            background: (machineDetails.current_stock_snapshot || 0) < 50 ? '#ef4444' : '#10b981'
+                                            justifyContent: 'center',
+                                            height: '42px',
+                                            borderColor: item.is_full ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                            color: item.is_full ? '#10b981' : '#94a3b8'
                                         }}
-                                    ></div>
+                                        onClick={() => handleUpdate(item.id, 'is_full', !item.is_full)}
+                                    >
+                                        {item.is_full ? <Check size={16} style={{ marginRight: 4 }} /> : null}
+                                        {item.is_full ? 'Lleno Completo' : 'Marcar Lleno'}
+                                    </button>
+                                </div>
+
+                                {/* Visual Indicator of Result */}
+                                <div style={{ marginTop: '8px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div
+                                        style={{
+                                            height: '100%',
+                                            width: `${Math.min(100, ((item.current + (parseInt(item.add_amount) || 0)) / item.capacity) * 100)}%`,
+                                            background: '#10b981',
+                                            transition: 'width 0.3s ease'
+                                        }}
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    <div className="field-group">
-                        <label>Tipo de Relleno {machineDetails?.machine_count > 1 && <span className="badge-god-mini" style={{ marginLeft: 8 }}>{machineDetails.machine_count} Máquinas</span>}</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                                type="button"
-                                className={`btn-secondary ${refillType === 'full' ? 'active-refill-btn' : ''}`}
-                                style={{ flex: 1, borderColor: refillType === 'full' ? '#10b981' : '', color: refillType === 'full' ? '#10b981' : '' }}
-                                onClick={() => setRefillType('full')}
-                            >
-                                Lleno Completo
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn-secondary ${refillType === 'partial' ? 'active-refill-btn' : ''}`}
-                                style={{ flex: 1, borderColor: refillType === 'partial' ? '#f59e0b' : '', color: refillType === 'partial' ? '#f59e0b' : '' }}
-                                onClick={() => setRefillType('partial')}
-                            >
-                                Parcial / Manual
-                            </button>
-                        </div>
+                        ))}
                     </div>
 
-                    {refillType === 'full' && machineDetails && (
-                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <AlertCircle size={20} color="#10b981" />
-                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#d1fae5' }}>
-                                Se agregarán aprox. <strong>{Math.max(0, ((machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1)) - (machineDetails.current_stock_snapshot || 0))}</strong> cápsulas para llegar al 100%.
-                            </p>
-                        </div>
-                    )}
-
-                    {refillType === 'partial' && (
-                        <div className="field-group">
-                            <label>Cantidad Ingresada (Cápsulas)</label>
-                            <input
-                                type="number"
-                                className="refill-input"
-                                value={manualAmount}
-                                onChange={e => setManualAmount(e.target.value)}
-                                placeholder="Ej: 50"
-                                required
-                            />
-                        </div>
-                    )}
-
-                    <div className="field-group">
-                        <label>Evidencia Visual</label>
-                        <div className="photo-preview-box" onClick={() => document.getElementById('refill-photo').click()}>
+                    <div className="field-group" style={{ marginTop: '20px' }}>
+                        <label>Evidencia Visual (Opcional)</label>
+                        <div className="photo-preview-box compact" onClick={() => document.getElementById('refill-photo').click()} style={{ height: '80px', minHeight: '80px' }}>
                             {photoPreview ? (
                                 <img src={photoPreview} alt="Preview" className="preview-img" />
                             ) : (
-                                <>
-                                    <Camera size={28} />
-                                    <span style={{ fontSize: '0.9rem', marginTop: '8px' }}>Tocar para tomar foto</span>
-                                </>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#94a3b8' }}>
+                                    <Camera size={24} />
+                                    <span>Tocar para tomar foto</span>
+                                </div>
                             )}
                             <input
                                 id="refill-photo"
@@ -305,8 +218,8 @@ export default function RefillFormModal({ onClose, onSuccess, preSelectedMachine
 
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-                        <button type="submit" className="btn-primary" disabled={submitting || !selectedMachine}>
-                            {submitting ? 'Guardando...' : 'Confirmar Relleno'}
+                        <button type="submit" className="btn-primary" disabled={submitting}>
+                            {submitting ? 'Guardando...' : 'Confirmar Rellenos'}
                         </button>
                     </div>
                 </form>
