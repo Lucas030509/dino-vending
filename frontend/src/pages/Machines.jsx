@@ -12,13 +12,12 @@ import './Machines.css'
 
 export default function Machines() {
     // Offline: Read from Dexie
-    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray()) || []
+    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
+    const loading = !machines
 
     // Derived state for filtering
     const [filteredMachines, setFilteredMachines] = useState([])
 
-    // Loading is effectively handled by initial empty array, but we can keep a conceptual loading if needed.
-    // However, liveQuery allows the UI to render immediately.
 
     const [showModal, setShowModal] = useState(false)
 
@@ -51,6 +50,8 @@ export default function Machines() {
 
     // Filter effect
     useEffect(() => {
+        if (!machines) return; // Wait for load
+
         if (!filterQuery) {
             setFilteredMachines(machines)
         } else {
@@ -426,7 +427,8 @@ export default function Machines() {
                 const newCount = machinesToUpsert.length - updatedCount;
 
                 showToast(`Importación exitosa: ${newCount} nuevas, ${updatedCount} actualizadas.`, 'success');
-                fetchMachines();
+                showToast(`Importación exitosa: ${newCount} nuevas, ${updatedCount} actualizadas.`, 'success');
+                // fetchMachines(); // Removed as handled by liveQuery/Sync
 
             } catch (error) {
                 console.error("Error importing excel:", error);
