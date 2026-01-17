@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { GiVendingMachine } from 'react-icons/gi'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText, ShieldCheck } from 'lucide-react'
@@ -376,7 +377,7 @@ export default function Dashboard({ isSuperAdmin }) {
             <Settings size={20} />
           </button>
           <button onClick={() => navigate('/machines')} className="nav-btn">
-            <LayoutGrid size={20} />
+            <GiVendingMachine size={22} />
             <span className="hide-mobile">Maquinas</span>
           </button>
           <button onClick={() => navigate('/routes')} className="nav-btn">
