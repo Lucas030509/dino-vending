@@ -12,8 +12,9 @@ import './Machines.css'
 
 export default function Machines() {
     // Offline: Read from Dexie
-    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
-    const loading = !machines
+    const machinesData = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
+    const loading = !machinesData
+    const machines = machinesData || []
 
     // Derived state for filtering
     const [filteredMachines, setFilteredMachines] = useState([])
