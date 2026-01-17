@@ -431,7 +431,12 @@ export default function Collections() {
 
                     <div className="scrollable-list">
                         {filteredMachines.map(machine => (
-                            <div key={machine.id} className="machine-item glass-hover">
+                            <div
+                                key={machine.id}
+                                className="machine-item glass-hover"
+                                onClick={() => handleOpenModal(machine)}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className="m-info">
                                     <h4>{machine.location_name}</h4>
                                     <p className="sub-text">
@@ -439,13 +444,9 @@ export default function Collections() {
                                         {machine.contract_type === 'rent' ? ' Renta Fija' : ` ${machine.commission_percent}% Com.`}
                                     </p>
                                 </div>
-                                <button
-                                    className="action-btn-icon"
-                                    onClick={() => handleOpenModal(machine)}
-                                    title="Registrar Corte"
-                                >
-                                    <ArrowDownToLine size={20} />
-                                </button>
+                                <div className="action-btn-icon" title="Registrar Corte">
+                                    <ArrowDownToLine size={24} />
+                                </div>
                             </div>
                         ))}
                         {filteredMachines.length === 0 && (
