@@ -34,7 +34,17 @@ export async function syncFromSupabase() {
             .eq('tenant_id', tenantId);
 
         if (locations && !locError) {
-            await bulkSave('locations', locations);
+            // Check for potential Zombies (deleted remotely but present locally)
+            // Strategy: Get local IDs, compare with remote. Or simply clear and refill if dataset is small.
+            // For Locations (<1000 usually) and Machines, clearing and refilling is safer for consistency.
+            if (locations.length === 0) {
+                await db.locations.clear();
+            } else {
+                // Or smarter: db.locations.clear() then bulkAdd to remove deleted ones.
+                // This is 'Strategy: Full Replace'. Safe for 'catalogs' like Locations/Machines/Products.
+                await db.locations.clear(); // Wipe clean
+                await bulkSave('locations', locations);
+            }
             console.log(`✅ Synced ${locations.length} locations`);
         } else if (locError) {
             console.error("Error syncing locations", locError);

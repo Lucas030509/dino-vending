@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { GiVendingMachine } from 'react-icons/gi'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText, ShieldCheck } from 'lucide-react'
+import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText, ShieldCheck, Store } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -379,6 +379,10 @@ export default function Dashboard({ isSuperAdmin }) {
           <button onClick={() => navigate('/machines')} className="nav-btn">
             <GiVendingMachine size={22} />
             <span className="hide-mobile">Maquinas</span>
+          </button>
+          <button onClick={() => navigate('/locations')} className="nav-btn">
+            <Store size={20} />
+            <span className="hide-mobile">Puntos</span>
           </button>
           <button onClick={() => navigate('/routes')} className="nav-btn">
             <MapPin size={20} />

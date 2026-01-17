@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Camera, Eraser } from 'lucide-react'
+import { Plus, Camera, Eraser, AlertCircle } from 'lucide-react'
 
 const CollectionModal = ({
     location = {},
@@ -41,6 +41,23 @@ const CollectionModal = ({
 
                 <form onSubmit={onSubmit}>
                     <div className="modal-body-grid" style={{ display: 'flex', flexDirection: 'column' }}>
+
+                        {machineAlert && (
+                            <div style={{
+                                background: 'rgba(234, 179, 8, 0.1)',
+                                color: '#fbbf24',
+                                padding: '12px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                border: '1px solid rgba(234, 179, 8, 0.2)'
+                            }}>
+                                <AlertCircle size={20} />
+                                <span style={{ fontWeight: 500 }}>{machineAlert.message}</span>
+                            </div>
+                        )}
 
                         {/* Global Settings */}
                         <div className="input-group" style={{ marginBottom: 20 }}>

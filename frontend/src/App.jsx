@@ -11,6 +11,7 @@ import './App.css' // Global App Styles
 const Auth = React.lazy(() => import('./pages/Auth'))
 const Dashboard = React.lazy(() => import('./pages/Dashboard'))
 const Machines = React.lazy(() => import('./pages/Machines'))
+const Locations = React.lazy(() => import('./pages/Locations'))
 const RoutePlanner = React.lazy(() => import('./pages/RoutePlanner'))
 const Collections = React.lazy(() => import('./pages/Collections'))
 const PublicReport = React.lazy(() => import('./pages/PublicReport'))
@@ -129,6 +130,7 @@ function App() {
               {/* Standard Routes */}
               <Route path="/" element={session ? <Dashboard isSuperAdmin={userRole === 'super_admin'} /> : <Navigate to="/auth" />} />
               <Route path="/machines" element={session ? <Machines /> : <Navigate to="/auth" />} />
+              <Route path="/locations" element={session ? <Locations /> : <Navigate to="/auth" />} />
               <Route path="/routes" element={session ? <RoutePlanner /> : <Navigate to="/auth" />} />
               <Route path="/collections" element={session ? <Collections /> : <Navigate to="/auth" />} />
               <Route path="/reports" element={session ? <Reports /> : <Navigate to="/auth" />} />

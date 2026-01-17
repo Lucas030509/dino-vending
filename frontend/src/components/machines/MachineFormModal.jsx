@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Search, Loader2, MapPin, User, Mail, Phone, Clock, DollarSign, Navigation } from 'lucide-react'
+import { db } from '../../lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 const DEFAULT_MACHINE = {
     qr_code_uid: '',
@@ -23,6 +25,7 @@ const DEFAULT_MACHINE = {
 }
 
 export function MachineFormModal({ isOpen, onClose, onSubmit, initialData, isEditing }) {
+    const locations = useLiveQuery(() => db.locations.toArray())
     const [formData, setFormData] = useState(DEFAULT_MACHINE)
     const [searchQuery, setSearchQuery] = useState('')
     const [suggestions, setSuggestions] = useState([])
@@ -33,8 +36,9 @@ export function MachineFormModal({ isOpen, onClose, onSubmit, initialData, isEdi
 
     useEffect(() => {
         if (isOpen) {
-            if (initialData && isEditing) {
-                setFormData(initialData)
+            if (initialData) {
+                // Merge initial data with default (handle both Edit and Pre-fill cases)
+                setFormData(prev => ({ ...DEFAULT_MACHINE, ...initialData }))
                 setSearchQuery(initialData.address || '')
             } else {
                 setFormData(DEFAULT_MACHINE)
@@ -141,6 +145,40 @@ export function MachineFormModal({ isOpen, onClose, onSubmit, initialData, isEdi
                             required
                         />
                     </div>
+                    <div className="input-group">
+                        <label>Asignar a Punto de Venta</label>
+                        <select
+                            className="select-input"
+                            value={formData.location_id || ''}
+                            onChange={e => {
+                                const locId = e.target.value
+                                if (locId) {
+                                    const loc = locations?.find(l => l.id === locId)
+                                    if (loc) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            location_id: locId,
+                                            location_name: loc.name,
+                                            address: loc.address || prev.address,
+                                            zone: loc.district || prev.zone
+                                        }))
+                                        // Also update search query for address if needed
+                                        if (loc.address) setSearchQuery(loc.address)
+                                    }
+                                } else {
+                                    setFormData(prev => ({ ...prev, location_id: null }))
+                                }
+                            }}
+                        >
+                            <option value="">-- Sin asignar (Individual) --</option>
+                            {locations?.map(loc => (
+                                <option key={loc.id} value={loc.id}>
+                                    {loc.name} {loc.district ? `(${loc.district})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="input-group">
                         <label>Ubicación (Nombre)</label>
                         <input

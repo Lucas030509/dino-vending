@@ -41,3 +41,33 @@ export const getMexicoCityDate = () => {
         return new Date().toISOString().split('T')[0];
     }
 };
+
+/**
+ * Calculates the next visit date, skipping closed days.
+ * @param {string} startDateStr - YYYY-MM-DD
+ * @param {number} daysToAdd 
+ * @param {string[]} closedDays - Array of day names e.g. ['Sunday']
+ * @returns {string} - YYYY-MM-DD
+ */
+export const calculateSmartNextDate = (startDateStr, daysToAdd, closedDays = []) => {
+    const date = new Date(startDateStr);
+    date.setDate(date.getDate() + parseInt(daysToAdd));
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Normalize closedDays to Title Case just in case
+    const closedSet = new Set(closedDays.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()));
+
+    // Safety break to prevent infinite loops if all days are closed (though unlikely)
+    let checks = 0;
+    while (checks < 14) {
+        const currentDayName = dayNames[date.getDay()];
+        if (!closedSet.has(currentDayName)) {
+            break;
+        }
+        date.setDate(date.getDate() + 1);
+        checks++;
+    }
+
+    return date.toISOString().split('T')[0];
+};

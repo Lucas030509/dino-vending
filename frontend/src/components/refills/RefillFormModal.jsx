@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { db } from '../../lib/db'
 import { X, Camera, Package, AlertCircle, Check, ArrowRight } from 'lucide-react'
 import '../../pages/Refills.css'
 
@@ -93,13 +94,14 @@ export default function RefillFormModal({ onClose, onSuccess, location }) {
 
                 const newStock = Math.min(item.capacity, item.current + added)
                 const machine = machines.find(m => m.id === item.id)
+                const now = new Date().toISOString()
 
                 // Insert Record
                 await supabase.from('collections').insert({
                     tenant_id: machine.tenant_id,
                     location_id: location.id, // NEW
                     machine_id: machine.id,
-                    collection_date: new Date().toISOString(),
+                    collection_date: now,
                     created_by: user.id,
                     record_type: 'refill', // Crucial to distinguish
                     inventory_refilled: added,
@@ -108,11 +110,17 @@ export default function RefillFormModal({ onClose, onSuccess, location }) {
                     evidence_photo_url: photoUrl
                 })
 
-                // Update Machine Snapshot
+                // Update Machine Snapshot in Supabase
                 await supabase.from('machines').update({
                     current_stock_snapshot: newStock,
-                    last_refill_date: new Date().toISOString()
+                    last_refill_date: now
                 }).eq('id', machine.id)
+
+                // Update Local Dexie DB
+                await db.machines.update(machine.id, {
+                    current_stock_snapshot: newStock,
+                    last_refill_date: now
+                })
             })
 
             await Promise.all(updates)

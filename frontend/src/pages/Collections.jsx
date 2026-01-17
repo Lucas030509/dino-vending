@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser, Eye } from 'lucide-react'
 import SignatureCanvas from 'react-signature-canvas'
-import { getMexicoCityDate, formatDateDDMMYYYY } from '../utils/formatters'
+import { getMexicoCityDate, formatDateDDMMYYYY, calculateSmartNextDate } from '../utils/formatters'
 import { CollectionModal } from '../components/collections/CollectionModal'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
 import { db } from '../lib/db'
@@ -35,8 +35,39 @@ export default function Collections() {
     // Collection State: Map { machineId: { ...data } }
     const [collectionMap, setCollectionMap] = useState({})
 
-    // Group Machines by Location (Already done above)
-    // ...
+    // --- PROCESS DATA: GROUP MACHINES BY LOCATION ---
+    useEffect(() => {
+        if (isLoadingData) return
+
+        // 1. Group machines by location ID
+        const machinesByLoc = {}
+        machines.forEach(m => {
+            if (m.location_id) {
+                if (!machinesByLoc[m.location_id]) machinesByLoc[m.location_id] = []
+                machinesByLoc[m.location_id].push(m)
+            }
+        })
+
+        // 2. Enrich Locations
+        const enrichedLocations = locations.map(loc => ({
+            ...loc,
+            machines: machinesByLoc[loc.id] || [],
+            total_machines: (machinesByLoc[loc.id] || []).length
+        }))
+
+        // 3. Filter
+        if (!filterQuery) {
+            setFilteredLocations(enrichedLocations)
+        } else {
+            const q = filterQuery.toLowerCase()
+            const filtered = enrichedLocations.filter(l =>
+                l.name.toLowerCase().includes(q) ||
+                (l.address && l.address.toLowerCase().includes(q))
+            )
+            setFilteredLocations(filtered)
+        }
+
+    }, [locations, machines, filterQuery, isLoadingData])
 
     // Toast State
     const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
@@ -106,8 +137,27 @@ export default function Collections() {
         setShowSignatureModal(false)
         setShowModal(true)
 
-        // Check reports (simplified: just check if ANY machine has reports)
-        // ... (Optional: fetch reports for all machines in loc)
+        // Check reports
+        try {
+            const machineIds = machines.map(m => m.id)
+            const openReports = await db.reports
+                .where('machine_id')
+                .anyOf(machineIds)
+                .filter(r => r.status === 'pending')
+                .toArray()
+
+            if (openReports.length > 0) {
+                setMachineAlert({
+                    type: 'warning',
+                    message: `⚠ Hay ${openReports.length} reporte(s) pendiente(s) en este punto.`
+                })
+            } else {
+                setMachineAlert(null)
+            }
+        } catch (err) {
+            console.error("Error checking reports:", err)
+            // Non-critical, just ignore
+        }
     }
 
     // --- LOGIC: UPDATE INDIVIDUAL COLLECTION ---
@@ -263,6 +313,11 @@ export default function Collections() {
                     await supabase.from('machines').update({
                         current_stock_snapshot: newStock
                     }).eq('id', machine.id)
+
+                    // Update Local Dexie DB
+                    await db.machines.update(machine.id, {
+                        current_stock_snapshot: newStock
+                    })
                 } catch (e) { console.error(e) }
 
                 // Fire Email (One per machine? Or aggregate? Let's just fire existing per-collection logic for now)

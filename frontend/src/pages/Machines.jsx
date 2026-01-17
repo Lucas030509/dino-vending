@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, PlusCircle, Search, Upload, CheckCircle2, Printer, CheckSquare, Square } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Search, Upload, CheckCircle2, Printer, CheckSquare, Square, LayoutGrid, Store, Layers } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { db } from '../lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -18,7 +18,7 @@ export default function Machines() {
 
     // Derived state for filtering
     const [filteredMachines, setFilteredMachines] = useState([])
-
+    const [viewMode, setViewMode] = useState('all') // all, location, zone
 
     const [showModal, setShowModal] = useState(false)
 
@@ -474,7 +474,35 @@ export default function Machines() {
                         <button className="select-all-icon-btn" onClick={selectAll} title={selectedIds.size === filteredMachines.length ? "Deseleccionar todas" : "Seleccionar todas"}>
                             {selectedIds.size > 0 && selectedIds.size === filteredMachines.length ? <CheckSquare size={18} className="teal" /> : <Square size={18} className="dim" />}
                         </button>
+                        <button className="select-all-icon-btn" onClick={selectAll} title={selectedIds.size === filteredMachines.length ? "Deseleccionar todas" : "Seleccionar todas"}>
+                            {selectedIds.size > 0 && selectedIds.size === filteredMachines.length ? <CheckSquare size={18} className="teal" /> : <Square size={18} className="dim" />}
+                        </button>
                     </div>
+
+                    <div className="view-switcher" style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', gap: '4px' }}>
+                        <button
+                            onClick={() => setViewMode('all')}
+                            title="Ver Todas"
+                            style={{ background: viewMode === 'all' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'all' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                        >
+                            <LayoutGrid size={18} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('location')}
+                            title="Agrupar por Punto de Venta"
+                            style={{ background: viewMode === 'location' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'location' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                        >
+                            <Store size={18} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('zone')}
+                            title="Agrupar por Zona"
+                            style={{ background: viewMode === 'zone' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'zone' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                        >
+                            <Layers size={18} />
+                        </button>
+                    </div>
+
                     <div className="actions">
                         <input
                             type="file"
@@ -511,32 +539,83 @@ export default function Machines() {
                         <p>{filterQuery ? 'No se encontraron máquinas con ese criterio.' : 'No tienes máquinas registradas.'}</p>
                     </div>
                 ) : (
-                    <div className="machine-grid">
-                        {filteredMachines.map(machine => (
-                            <MachineCard
-                                key={machine.id}
-                                machine={machine}
-                                isSelected={selectedIds.has(machine.id)}
-                                onSelect={(e) => toggleSelection(e, machine.id)}
-                                onEdit={handleEdit}
-                                onDelete={handleDeleteMachine}
-                                onToggleStatus={handleToggleStatus}
-                            />
-                        ))}
-                    </div>
+                    <>
+                        {viewMode === 'all' && (
+                            <div className="machine-grid">
+                                {filteredMachines.map(machine => (
+                                    <MachineCard
+                                        key={machine.id}
+                                        machine={machine}
+                                        isSelected={selectedIds.has(machine.id)}
+                                        onSelect={(e) => toggleSelection(e, machine.id)}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDeleteMachine}
+                                        onToggleStatus={handleToggleStatus}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {viewMode !== 'all' && (
+                            <div className="grouped-view">
+                                {Object.entries(
+                                    filteredMachines.reduce((acc, machine) => {
+                                        const key = viewMode === 'location'
+                                            ? (machine.location_name || 'Sin Asignar')
+                                            : (machine.zone || 'Sin Zona');
+                                        if (!acc[key]) acc[key] = [];
+                                        acc[key].push(machine);
+                                        return acc;
+                                    }, {})
+                                ).map(([groupName, groupMachines]) => (
+                                    <div key={groupName} className="group-section" style={{ marginBottom: '30px' }}>
+                                        <h3 style={{
+                                            fontSize: '1.2rem',
+                                            marginBottom: '15px',
+                                            paddingBottom: '8px',
+                                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                            color: 'var(--primary-color)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}>
+                                            {viewMode === 'location' ? <Store size={18} /> : <Layers size={18} />}
+                                            {groupName}
+                                            <span style={{ fontSize: '0.8em', opacity: 0.6, marginLeft: 'auto' }}>({groupMachines.length})</span>
+                                        </h3>
+                                        <div className="machine-grid">
+                                            {groupMachines.map(machine => (
+                                                <MachineCard
+                                                    key={machine.id}
+                                                    machine={machine}
+                                                    isSelected={selectedIds.has(machine.id)}
+                                                    onSelect={(e) => toggleSelection(e, machine.id)}
+                                                    onEdit={handleEdit}
+                                                    onDelete={handleDeleteMachine}
+                                                    onToggleStatus={handleToggleStatus}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
             </section>
 
             {/* Modal de Registro / Edición (Refactorizado) */}
-            {showModal && (
-                <MachineFormModal
-                    isOpen={showModal}
-                    onClose={() => setShowModal(false)}
-                    onSubmit={handleSaveMachine}
-                    initialData={editingMachine}
-                    isEditing={!!editingId}
-                />
-            )}
+            {
+                showModal && (
+                    <MachineFormModal
+                        isOpen={showModal}
+                        onClose={() => setShowModal(false)}
+                        onSubmit={handleSaveMachine}
+                        initialData={editingMachine}
+                        isEditing={!!editingId}
+                    />
+                )
+            }
 
             {/* Hidden QR Generator for Print */}
             <div style={{ position: 'absolute', top: '-9999px', left: '-9999px' }}>
