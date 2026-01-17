@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { X, Camera, Package, AlertCircle } from 'lucide-react'
 import '../../pages/Refills.css' // Reuse styles
 
-export default function RefillFormModal({ onClose, onSuccess }) {
+export default function RefillFormModal({ onClose, onSuccess, preSelectedMachine }) {
     const [machines, setMachines] = useState([])
     const [selectedMachine, setSelectedMachine] = useState('')
     const [loading, setLoading] = useState(true)
@@ -20,8 +20,24 @@ export default function RefillFormModal({ onClose, onSuccess }) {
     const [estimatedFill, setEstimatedFill] = useState(0)
 
     useEffect(() => {
-        fetchMachines()
-    }, [])
+        if (preSelectedMachine) {
+            // If passed explicitly, use it and skip fetch if we want, 
+            // but we might still want to fetch others if user changes mind? 
+            // Actually UX says "Directly on machine", so we lock it.
+            setSelectedMachine(preSelectedMachine.id)
+            setMachineDetails(preSelectedMachine)
+
+            const count = preSelectedMachine.machine_count || 1;
+            const unitCapacity = preSelectedMachine.capsule_capacity || 180;
+            const totalCapacity = unitCapacity * count;
+            const current = preSelectedMachine.current_stock_snapshot || 0
+
+            setEstimatedFill(Math.max(0, totalCapacity - current))
+            setLoading(false) // No need to fetch machines list
+        } else {
+            fetchMachines()
+        }
+    }, [preSelectedMachine])
 
     const fetchMachines = async () => {
         try {
@@ -175,18 +191,28 @@ export default function RefillFormModal({ onClose, onSuccess }) {
 
                 <form onSubmit={handleSubmit}>
                     <div className="field-group">
-                        <label>Seleccionar Máquina</label>
-                        <select
-                            className="refill-input"
-                            value={selectedMachine}
-                            onChange={handleMachineSelect}
-                            required
-                        >
-                            <option value="">-- Elige una máquina --</option>
-                            {machines.map(m => (
-                                <option key={m.id} value={m.id}>{m.location_name}</option>
-                            ))}
-                        </select>
+                        <label>Máquina Seleccionada</label>
+                        {preSelectedMachine ? (
+                            <input
+                                type="text"
+                                className="refill-input"
+                                value={preSelectedMachine.location_name}
+                                disabled
+                                style={{ background: '#f1f5f9', color: '#475569' }}
+                            />
+                        ) : (
+                            <select
+                                className="refill-input"
+                                value={selectedMachine}
+                                onChange={handleMachineSelect}
+                                required
+                            >
+                                <option value="">-- Elige una máquina --</option>
+                                {machines.map(m => (
+                                    <option key={m.id} value={m.id}>{m.location_name}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     {machineDetails && (
