@@ -23,6 +23,7 @@ export default function Collections() {
     const [filteredMachines, setFilteredMachines] = useState([])
     const [filterQuery, setFilterQuery] = useState('')
     // const [loading, setLoading] = useState(false) // Removed, using isLoadingData
+    const [viewMode, setViewMode] = useState('list') // 'list' or 'history'
     const [selectedMachine, setSelectedMachine] = useState(null)
     const [showModal, setShowModal] = useState(false)
     const [collectionToDelete, setCollectionToDelete] = useState(null)
@@ -412,106 +413,126 @@ export default function Collections() {
                         <p className="subtitle">Gestión financiera y rutas de servicio</p>
                     </div>
                 </div>
+                <div className="header-actions">
+                    <button
+                        className="btn-secondary"
+                        onClick={() => setViewMode(viewMode === 'list' ? 'history' : 'list')}
+                    >
+                        {viewMode === 'list' ? (
+                            <>
+                                <Calendar size={18} style={{ marginRight: 8 }} />
+                                Ver Historial Global
+                            </>
+                        ) : (
+                            <>
+                                <Plus size={18} style={{ marginRight: 8 }} />
+                                Nuevo Corte
+                            </>
+                        )}
+                    </button>
+                </div>
             </header>
 
-            <div className="main-grid">
-                {/* Left Panel: Active Machines to Service */}
-                <div className="panel machine-list-panel glass">
-                    <div className="panel-header">
-                        <h3>Máquinas Activas</h3>
-                        <span className="badge">{filteredMachines.length} Puntos</span>
-                    </div>
+            <div className="main-content-area" style={{ display: 'block' }}>
+                {viewMode === 'list' ? (
+                    /* Left Panel: Active Machines to Service */
+                    <div className="panel machine-list-panel glass" style={{ width: '100%', maxWidth: 'none' }}>
+                        <div className="panel-header">
+                            <h3>Máquinas Activas</h3>
+                            <span className="badge">{filteredMachines.length} Puntos</span>
+                        </div>
 
-                    <div className="search-box-container">
-                        <Search size={16} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Buscar punto..."
-                            value={filterQuery}
-                            onChange={(e) => setFilterQuery(e.target.value)}
-                            className="search-input"
-                        />
-                    </div>
+                        <div className="search-box-container">
+                            <Search size={16} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Buscar punto..."
+                                value={filterQuery}
+                                onChange={(e) => setFilterQuery(e.target.value)}
+                                className="search-input"
+                            />
+                        </div>
 
-                    <div className="scrollable-list">
-                        {filteredMachines.map(machine => (
-                            <div
-                                key={machine.id}
-                                className="machine-item glass-hover"
-                                onClick={() => handleOpenModal(machine)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className="m-info">
-                                    <h4>{machine.location_name}</h4>
-                                    <p className="sub-text">
-                                        {machine.qr_code_uid} •
-                                        {machine.contract_type === 'rent' ? ' Renta Fija' : ` ${machine.commission_percent}% Com.`}
-                                    </p>
+                        <div className="scrollable-list" style={{ maxHeight: 'none' }}>
+                            {filteredMachines.map(machine => (
+                                <div
+                                    key={machine.id}
+                                    className="machine-item glass-hover"
+                                    onClick={() => handleOpenModal(machine)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className="m-info">
+                                        <h4>{machine.location_name}</h4>
+                                        <p className="sub-text">
+                                            {machine.qr_code_uid} •
+                                            {machine.contract_type === 'rent' ? ' Renta Fija' : ` ${machine.commission_percent}% Com.`}
+                                        </p>
+                                    </div>
+                                    <div className="action-btn-icon" title="Registrar Corte">
+                                        <ArrowDownToLine size={24} />
+                                    </div>
                                 </div>
-                                <div className="action-btn-icon" title="Registrar Corte">
-                                    <ArrowDownToLine size={24} />
+                            ))}
+                            {filteredMachines.length === 0 && (
+                                <div className="empty-search-state">
+                                    <p>No se encontraron resultados.</p>
                                 </div>
-                            </div>
-                        ))}
-                        {filteredMachines.length === 0 && (
-                            <div className="empty-search-state">
-                                <p>No se encontraron resultados.</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
-
-                {/* Right Panel: Recent History */}
-                <div className="panel history-panel glass">
-                    <div className="panel-header">
-                        <h3>Historial Reciente</h3>
-                    </div>
-                    <div className="table-responsive">
-                        <table className="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Ubicación</th>
-                                    <th>Monto Bruto</th>
-                                    <th>Comisión</th>
-                                    <th>Ganancia Final</th>
-                                    <th style={{ width: 50 }}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {collections.map(col => (
-                                    <tr key={col.id}>
-                                        <td>{formatDateDDMMYYYY(col.collection_date)}</td>
-                                        <td>{col.machines?.location_name || 'Desconocida'}</td>
-                                        <td className="amount">${col.gross_amount}</td>
-                                        <td className="amount commission">-${col.commission_amount}</td>
-                                        <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
-                                            ${col.profit_amount ?? col.net_revenue}
-                                        </td>
-                                        <td>
-                                            <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
-                                                <Eye size={14} />
-                                            </button>
-                                            <button onClick={(e) => handleDeleteCollection(e, col)} className="delete-btn-mini" title="Eliminar Corte">
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {isLoadingData && (
+                ) : (
+                    /* Right Panel: Recent History */
+                    <div className="panel history-panel glass" style={{ width: '100%', maxWidth: 'none' }}>
+                        <div className="panel-header">
+                            <h3>Historial Reciente</h3>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="history-table">
+                                <thead>
                                     <tr>
-                                        <td colSpan="6" className="empty-cell">Cargando historial...</td>
+                                        <th>Fecha</th>
+                                        <th>Ubicación</th>
+                                        <th>Monto Bruto</th>
+                                        <th>Comisión</th>
+                                        <th>Ganancia Final</th>
+                                        <th style={{ width: 50 }}></th>
                                     </tr>
-                                )}
-                                {!isLoadingData && collections.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="empty-cell">No hay cortes registrados aún.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {collections.map(col => (
+                                        <tr key={col.id}>
+                                            <td>{formatDateDDMMYYYY(col.collection_date)}</td>
+                                            <td>{col.machines?.location_name || 'Desconocida'}</td>
+                                            <td className="amount">${col.gross_amount}</td>
+                                            <td className="amount commission">-${col.commission_amount}</td>
+                                            <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
+                                                ${col.profit_amount ?? col.net_revenue}
+                                            </td>
+                                            <td>
+                                                <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
+                                                    <Eye size={14} />
+                                                </button>
+                                                <button onClick={(e) => handleDeleteCollection(e, col)} className="delete-btn-mini" title="Eliminar Corte">
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {isLoadingData && (
+                                        <tr>
+                                            <td colSpan="6" className="empty-cell">Cargando historial...</td>
+                                        </tr>
+                                    )}
+                                    {!isLoadingData && collections.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="empty-cell">No hay cortes registrados aún.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Modal: Register Collection */}
