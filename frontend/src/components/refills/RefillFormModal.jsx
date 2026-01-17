@@ -28,7 +28,7 @@ export default function RefillFormModal({ onClose, onSuccess }) {
             // Fetch machines to populate select
             const { data, error } = await supabase
                 .from('machines')
-                .select('id, location_name, capsule_capacity, current_stock_snapshot, tenant_id')
+                .select('id, location_name, capsule_capacity, current_stock_snapshot, tenant_id, machine_count')
                 .eq('current_status', 'Active')
                 .order('location_name')
 
@@ -48,10 +48,13 @@ export default function RefillFormModal({ onClose, onSuccess }) {
         if (id) {
             const m = machines.find(mac => mac.id === id)
             setMachineDetails(m)
-            // Calculate heuristic: If Full, we refill (Capacity - Current)
-            const capacity = m.capsule_capacity || 180
+            // Calculate heuristic: If Full, we refill (Capacity * Count - Current)
+            const count = m.machine_count || 1;
+            const unitCapacity = m.capsule_capacity || 180;
+            const totalCapacity = unitCapacity * count;
+
             const current = m.current_stock_snapshot || 0
-            setEstimatedFill(Math.max(0, capacity - current))
+            setEstimatedFill(Math.max(0, totalCapacity - current))
         } else {
             setMachineDetails(null)
             setEstimatedFill(0)
@@ -96,19 +99,21 @@ export default function RefillFormModal({ onClose, onSuccess }) {
             }
 
             // 2. Calculate final numbers
-            const capacity = machineDetails.capsule_capacity || 180
+            const count = machineDetails.machine_count || 1;
+            const unitCapacity = machineDetails.capsule_capacity || 180;
+            const totalCapacity = unitCapacity * count;
             const current = machineDetails.current_stock_snapshot || 0
 
             let quantityAdded = 0
             let newStockLevel = 0
 
             if (refillType === 'full') {
-                quantityAdded = Math.max(0, capacity - current)
-                newStockLevel = capacity
+                quantityAdded = Math.max(0, totalCapacity - current)
+                newStockLevel = totalCapacity
             } else {
                 quantityAdded = parseInt(manualAmount) || 0
-                // Safety: Clamp to capacity
-                newStockLevel = Math.min(capacity, current + quantityAdded)
+                // Safety: Clamp to total capacity
+                newStockLevel = Math.min(totalCapacity, current + quantityAdded)
             }
 
             // 3. Insert into Collections (Kardex)
@@ -190,13 +195,13 @@ export default function RefillFormModal({ onClose, onSuccess }) {
                             <div className="stock-info">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '4px' }}>
                                     <span style={{ color: '#94a3b8' }}>Nivel Actual</span>
-                                    <span>{machineDetails.current_stock_snapshot || 0} / {machineDetails.capsule_capacity || 180}</span>
+                                    <span>{machineDetails.current_stock_snapshot || 0} / {(machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1)}</span>
                                 </div>
                                 <div className="stock-bar-bg">
                                     <div
                                         className="stock-bar-fill"
                                         style={{
-                                            width: `${Math.min(100, ((machineDetails.current_stock_snapshot || 0) / (machineDetails.capsule_capacity || 180)) * 100)}%`,
+                                            width: `${Math.min(100, ((machineDetails.current_stock_snapshot || 0) / ((machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1))) * 100)}%`,
                                             background: (machineDetails.current_stock_snapshot || 0) < 50 ? '#ef4444' : '#10b981'
                                         }}
                                     ></div>
@@ -206,7 +211,7 @@ export default function RefillFormModal({ onClose, onSuccess }) {
                     )}
 
                     <div className="field-group">
-                        <label>Tipo de Relleno</label>
+                        <label>Tipo de Relleno {machineDetails?.machine_count > 1 && <span className="badge-god-mini" style={{ marginLeft: 8 }}>{machineDetails.machine_count} Máquinas</span>}</label>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <button
                                 type="button"
@@ -231,7 +236,7 @@ export default function RefillFormModal({ onClose, onSuccess }) {
                         <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                             <AlertCircle size={20} color="#10b981" />
                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#d1fae5' }}>
-                                Se agregarán aprox. <strong>{Math.max(0, (machineDetails.capsule_capacity || 180) - (machineDetails.current_stock_snapshot || 0))}</strong> cápsulas para llegar al 100%.
+                                Se agregarán aprox. <strong>{Math.max(0, ((machineDetails.capsule_capacity || 180) * (machineDetails.machine_count || 1)) - (machineDetails.current_stock_snapshot || 0))}</strong> cápsulas para llegar al 100%.
                             </p>
                         </div>
                     )}
