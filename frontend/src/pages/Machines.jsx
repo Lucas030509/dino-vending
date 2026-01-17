@@ -5,6 +5,9 @@ import { ArrowLeft, PlusCircle, Search, Upload, CheckCircle2, Printer, CheckSqua
 import { QRCodeSVG } from 'qrcode.react'
 import { db } from '../lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import { MachineFormModal } from '../components/machines/MachineFormModal'
+import { MachineCard } from '../components/machines/MachineCard'
 import './Machines.css'
 
 export default function Machines() {
