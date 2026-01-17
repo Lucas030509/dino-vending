@@ -12,13 +12,17 @@ import './Collections.css'
 
 export default function Collections() {
     // Offline Data
-    const machines = useLiveQuery(() => db.machines.orderBy('location_name').toArray()) || []
-    const collections = useLiveQuery(() => db.collections.orderBy('collection_date').reverse().limit(50).toArray()) || []
+    // Offline Data
+    const machinesData = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
+    const collectionsData = useLiveQuery(() => db.collections.orderBy('collection_date').reverse().limit(50).toArray())
+
+    const machines = machinesData || []
+    const collections = collectionsData || []
+    const isLoadingData = !machinesData || !collectionsData
 
     const [filteredMachines, setFilteredMachines] = useState([])
     const [filterQuery, setFilterQuery] = useState('')
-    // const [collections, setCollections] = useState([]) // Replaced by liveQuery
-    const [loading, setLoading] = useState(false)
+    // const [loading, setLoading] = useState(false) // Removed, using isLoadingData
     const [selectedMachine, setSelectedMachine] = useState(null)
     const [showModal, setShowModal] = useState(false)
     const [collectionToDelete, setCollectionToDelete] = useState(null)
@@ -494,7 +498,12 @@ export default function Collections() {
                                         </td>
                                     </tr>
                                 ))}
-                                {collections.length === 0 && (
+                                {isLoadingData && (
+                                    <tr>
+                                        <td colSpan="6" className="empty-cell">Cargando historial...</td>
+                                    </tr>
+                                )}
+                                {!isLoadingData && collections.length === 0 && (
                                     <tr>
                                         <td colSpan="5" className="empty-cell">No hay cortes registrados aún.</td>
                                     </tr>
