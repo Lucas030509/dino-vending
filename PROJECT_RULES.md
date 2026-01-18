@@ -1,6 +1,14 @@
 # Project Rules & Customizations
 
-## UI/UX Design Standards
+## 🛠 Tech Stack & Infrastructure
+- **Backend / Database:** [Supabase](https://supabase.com)
+  - Auth, Database (PostgreSQL), Storage, Edge Functions.
+- **Frontend Hosting:** [Vercel](https://vercel.com)
+  - Automatic deployments from `main` branch.
+- **Frontend Framework:** React + Vite
+- **Local Database (Offline):** Dexie.js (IndexedDB)
+
+## 🎨 UI/UX Design Standards
 - **Global Style:** Dark mode with Glassmorphism (`.glass`).
 - **Modals:**
   - Wrapper: `.modal-overlay`
