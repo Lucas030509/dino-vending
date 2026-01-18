@@ -356,8 +356,9 @@ export default function Refills() {
                     location={selectedLocation}
                     onClose={() => setShowModal(false)}
                     onSuccess={() => {
-                        // Success toast handled by modal or parent
+                        showToast("Rellenos registrados correctamente", 'success')
                     }}
+                    showToast={showToast}
                 />
             )}
         </div>

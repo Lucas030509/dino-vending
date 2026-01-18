@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { Toast } from '../components/ui/Toast' // Add import
 import './Auth.css'
 
 export default function Auth() {
@@ -7,6 +8,13 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState('login') // 'login' or 'signup'
+
+  // Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type })
+  }
+  const hideToast = () => setToast({ ...toast, show: false })
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -19,10 +27,10 @@ export default function Auth() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
-        alert('Check your email for the confirmation link!')
+        showToast('¡Revisa tu correo para el enlace de confirmación!', 'success')
       }
     } catch (error) {
-      alert(error.error_description || error.message)
+      showToast(error.error_description || error.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -30,6 +38,12 @@ export default function Auth() {
 
   return (
     <div className="auth-container">
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
       <div className="glass auth-card">
         <h2>{mode === 'login' ? 'Iniciar Sesión' : 'Registrarse'}</h2>
         <p className="auth-subtitle">Accede a tu panel de DinoPlatform</p>
@@ -70,8 +84,6 @@ export default function Auth() {
           )}
         </div>
       </div>
-
-
     </div>
   )
 }

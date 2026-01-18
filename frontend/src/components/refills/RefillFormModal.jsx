@@ -130,7 +130,14 @@ export default function RefillFormModal({ onClose, onSuccess, location }) {
 
         } catch (error) {
             console.error(error)
-            alert("Error: " + error.message)
+            if (onClose.showToast) { // Defensive check if passed as property function
+                onClose.showToast("Error: " + error.message, 'error')
+            } else if (typeof showToast === 'function') {
+                showToast("Error: " + error.message, 'error')
+            } else {
+                // Fallback
+                console.error("No toast function available")
+            }
         } finally {
             setSubmitting(false)
         }

@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { Camera, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import './PublicReport.css'
 
+import { Toast } from '../components/ui/Toast' // Check path validity. Likely ../../components or ../components depending on folder. Pages is src/pages. Components is src/components. So ../components/ui/Toast is correct.
+
 export default function PublicReport() {
     const { uid } = useParams()
     const navigate = useNavigate()
@@ -11,6 +13,13 @@ export default function PublicReport() {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [completed, setCompleted] = useState(false)
+
+    // Toast State
+    const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
+    const showToast = (message, type = 'info') => {
+        setToast({ show: true, message, type })
+    }
+    const hideToast = () => setToast({ ...toast, show: false })
 
     // Form State
     const [reportType, setReportType] = useState('Atorada')
@@ -69,8 +78,7 @@ export default function PublicReport() {
 
                 if (uploadError) {
                     console.error("Storage error:", uploadError)
-                    alert("No se pudo subir la foto. Verifica que exista el bucket 'report-photos' público.")
-                    // Continue without photo or return? Let's continue.
+                    showToast("No se pudo subir la foto. Se enviará sin ella.", 'error')
                 } else {
                     const { data: { publicUrl } } = supabase.storage
                         .from('report-photos')
@@ -96,7 +104,7 @@ export default function PublicReport() {
 
         } catch (error) {
             console.error(error)
-            alert("Error al enviar reporte: " + error.message)
+            showToast("Error al enviar reporte: " + error.message, 'error')
         } finally {
             setSubmitting(false)
         }
@@ -117,6 +125,12 @@ export default function PublicReport() {
 
     return (
         <div className="report-page">
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={hideToast}
+            />
             <header className="report-header">
                 <h3>Reportar Problema</h3>
                 {loading ? <Loader2 className="spin" /> : (
@@ -150,7 +164,7 @@ export default function PublicReport() {
                         ) : (
                             <>
                                 <Camera size={32} />
-                                <span>Tomar foto o subir</span>
+                                <span style={{ textAlign: "center" }}>Tomar foto o subir</span>
                             </>
                         )}
                         <input
@@ -178,8 +192,6 @@ export default function PublicReport() {
                     {submitting ? 'Enviando...' : 'Enviar Reporte'}
                 </button>
             </form>
-
-
         </div>
     )
 }
