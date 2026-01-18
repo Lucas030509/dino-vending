@@ -132,15 +132,22 @@ h3 {
 }
 
 .toast-notification.success {
-  background: rgba(6, 78, 59, 0.9);
+  background: rgba(16, 185, 129, 0.95);
+  /* More vibrant emerald to match theme */
   border-left: 4px solid #34d399;
-  color: #d1fae5;
+  color: #fff;
+  height: auto !important;
+  top: auto !important;
+  width: auto !important;
 }
 
 .toast-notification.error {
-  background: rgba(127, 29, 29, 0.9);
-  border-left: 4px solid #ef4444;
-  color: #fee2e2;
+  background: rgba(220, 38, 38, 0.95);
+  border-left: 4px solid #fecaca;
+  color: #fff;
+  height: auto !important;
+  top: auto !important;
+  width: auto !important;
 }
 
 @keyframes slideIn {

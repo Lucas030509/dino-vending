@@ -232,18 +232,43 @@ export default function Machines() {
             console.log("Saving Machine Data:", machineData)
 
             let error
+            // Remove ID from payload just in case (we use it in eq)
+            const { id, ...payload } = machineData
+
             if (editingId) {
-                const { error: updateError } = await supabase
+                const { error: updateError, count } = await supabase
                     .from('machines')
-                    .update(machineData)
+                    .update(payload)
                     .eq('id', editingId)
+                    .select('id', { count: 'exact' }) // Select to get count and ensure generic return
+
                 error = updateError
+
+                if (!error && count === 0) {
+                    console.warn("Update succeeded but 0 rows affected. Check RLS or ID.")
+                    // Maybe throw error or show separate toast? 
+                    // Usually this means the ID wasn't found or RLS hid it.
+                    // But if the user sees it in the list, they have read access. 
+                    // Write access might be different.
+                }
+
+                // Temporary: Sync local immediately for better UX
+                if (!error) {
+                    await db.machines.update(editingId, payload)
+                }
+
             } else {
                 machineData.current_status = 'Active' // Set default only on insert
-                const { error: insertError } = await supabase
+                const { data: inserted, error: insertError } = await supabase
                     .from('machines')
                     .insert(machineData)
+                    .select()
+                    .single()
+
                 error = insertError
+                if (!error && inserted) {
+                    await db.machines.add(inserted)
+                }
             }
 
             if (!error) {
