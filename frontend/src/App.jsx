@@ -2,6 +2,7 @@ import React, { useEffect, useState, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { syncFromSupabase, processSyncQueue } from './lib/sync' // Import sync
+import { clearLocalData } from './lib/db' // Import clearLocalData
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import SyncIndicator from './components/ui/SyncIndicator'
 
@@ -31,9 +32,13 @@ function App() {
       if (!session) setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
-      if (!session) {
+      if (event === 'SIGNED_OUT') {
+        await clearLocalData() // Clear data on logout
+        setLoading(false)
+        setUserRole(null)
+      } else if (!session) {
         setLoading(false)
         setUserRole(null)
       }
@@ -41,6 +46,8 @@ function App() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // ... (rest of code)
 
   // GLobal Sync Trigger (Download + Queue Processing)
   const handleGlobalSync = async () => {
