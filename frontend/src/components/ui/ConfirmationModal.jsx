@@ -34,9 +34,12 @@ export const ConfirmationModal = ({
                 className="glass modal-content compact-modal"
                 onClick={(e) => e.stopPropagation()} // CRITICAL: Propagate Stop prevents ghost clicks closing modal
                 style={{
+                    width: '95%',
                     maxWidth: '400px',
                     textAlign: 'center',
-                    border: '1px solid rgba(255,255,255,0.1)'
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    maxHeight: 'auto',
+                    overflowY: 'visible'
                 }}
             >
                 <div style={{

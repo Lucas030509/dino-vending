@@ -285,7 +285,7 @@ export default function Collections() {
                 // Insert Collection
                 const { data: inserted, error } = await supabase.from('collections').insert({
                     tenant_id: machine.tenant_id,
-                    location_id: selectedLocation.id, // NEW: Link to Location
+                    location_id: selectedLocation.id,
                     machine_id: machine.id,
                     collection_date: entry.collection_date,
                     gross_amount: gross,
@@ -300,27 +300,60 @@ export default function Collections() {
                     next_visit_date: nextVisitDateStr,
                     notes: entry.notes,
                     created_by: user.id,
-                    evidence_photo_url: photoUrl,     // SHARED URL
-                    evidence_signature_url: signatureUrl // SHARED URL
+                    evidence_photo_url: photoUrl,
+                    evidence_signature_url: signatureUrl
                 }).select().single()
 
                 if (error) throw error
 
+                // --- 4. Handle Refill / Stock Updates ---
+                let newStock = machine.current_stock_snapshot || 0
+                // Deduct Sales
+                newStock = Math.max(0, newStock - units)
+
+                // Add Refill if specified
+                if (entry.add_stock || entry.is_full) {
+                    const added = parseInt(entry.add_stock || 0)
+
+                    // 1. Calculate final stock logic
+                    if (entry.is_full) {
+                        newStock = machine.capsule_capacity || 180 // Default capacity if null
+                    } else {
+                        newStock = newStock + added
+                    }
+                    // Cap at capacity? Maybe not to avoid blocking, but logically yes.
+                    const capacity = machine.capsule_capacity || 180
+                    if (newStock > capacity) newStock = capacity
+
+                    // 2. Insert Refill Record
+                    await supabase.from('refills').insert({
+                        tenant_id: machine.tenant_id,
+                        machine_id: machine.id,
+                        previous_percentage: 0, // Not explicitly tracked here, approximation
+                        current_percentage: Math.round((newStock / capacity) * 100),
+                        quantity_added: added,
+                        is_full: entry.is_full || false,
+                        refill_date: new Date().toISOString(), // Use precise time
+                        created_by: user.id
+                        // evidence? Could reuse collection photo if we wanted: evidence_photo_url: photoUrl
+                    })
+                }
+
                 // Update Machine Stock
                 try {
-                    // Since we don't have atomic decrement in this simple setup easily, assume optimistic
-                    const newStock = Math.max(0, (machine.current_stock_snapshot || 0) - units)
                     await supabase.from('machines').update({
-                        current_stock_snapshot: newStock
+                        current_stock_snapshot: newStock,
+                        last_refill_date: (entry.add_stock || entry.is_full) ? new Date().toISOString() : machine.last_refill_date
                     }).eq('id', machine.id)
 
                     // Update Local Dexie DB
                     await db.machines.update(machine.id, {
-                        current_stock_snapshot: newStock
+                        current_stock_snapshot: newStock,
+                        last_refill_date: (entry.add_stock || entry.is_full) ? new Date().toISOString() : machine.last_refill_date
                     })
                 } catch (e) { console.error(e) }
 
-                // Fire Email (One per machine? Or aggregate? Let's just fire existing per-collection logic for now)
+                // Fire Email
                 if (machine.contact_email) {
                     supabase.functions.invoke('send-receipt', { body: { collection_id: inserted.id } })
                 }
@@ -517,10 +550,10 @@ export default function Collections() {
                                         <tr key={col.id}>
                                             <td>{formatDateDDMMYYYY(col.collection_date)}</td>
                                             <td>{col.machines?.location_name || 'Desconocida'}</td>
-                                            <td className="amount">${col.gross_amount}</td>
-                                            <td className="amount commission">-${col.commission_amount}</td>
+                                            <td className="amount">${parseFloat(col.gross_amount || 0).toFixed(2)}</td>
+                                            <td className="amount commission">-${parseFloat(col.commission_amount || 0).toFixed(2)}</td>
                                             <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
-                                                ${col.profit_amount ?? col.net_revenue}
+                                                ${parseFloat(col.profit_amount ?? col.net_revenue ?? 0).toFixed(2)}
                                             </td>
                                             <td>
                                                 <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
