@@ -308,7 +308,14 @@ export default function Locations() {
                             const locMachines = machines.filter(m => m.location_id === loc.id);
 
                             return (
-                                <div key={loc.id} className="machine-card glass hover-effect" style={{ display: 'flex', flexDirection: 'column' }}>
+                                <div key={loc.id}
+                                    className="machine-card glass hover-effect"
+                                    style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+                                    onClick={() => {
+                                        setPreSelectedLocation(loc)
+                                        setShowLinkModal(true)
+                                    }}
+                                >
                                     <div className="card-header">
                                         <div className="header-top">
                                             <h3 className="machine-name text-xl">{loc.name}</h3>
@@ -360,32 +367,11 @@ export default function Locations() {
                                         gridTemplateColumns: 'auto auto 1fr',
                                         gap: '8px'
                                     }}>
-                                        <button onClick={() => { setEditingLocation(loc); setShowModal(true) }} className="icon-btn tool-btn" title="Editar">
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingLocation(loc); setShowModal(true) }} className="icon-btn tool-btn" title="Editar">
                                             <Edit size={16} />
                                         </button>
-                                        <button onClick={() => { setLocationToDelete(loc); setDeleteError(null); }} className="icon-btn delete-btn" title="Eliminar">
+                                        <button onClick={(e) => { e.stopPropagation(); setLocationToDelete(loc); setDeleteError(null); }} className="icon-btn delete-btn" title="Eliminar">
                                             <Trash2 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                                setPreSelectedLocation(loc)
-                                                setShowLinkModal(true)
-                                            }}
-                                            className="btn-primary-sm"
-                                            style={{
-                                                justifySelf: 'end',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                padding: '6px 16px',
-                                                borderRadius: '20px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 500
-                                            }}
-                                        >
-                                            <PlusCircle size={16} /> Agregar
                                         </button>
                                     </div>
                                 </div>
@@ -447,10 +433,28 @@ export default function Locations() {
                         await db.machines.update(machine.id, updates)
 
                         showToast("Máquina asignada al punto de venta.", 'success')
-                        setShowLinkModal(false)
+                        // Keep modal open or close? User might want to manage more. Let's keep it open or close. User usually closes.
                     } catch (e) {
                         console.error(e)
                         showToast("Error al asignar: " + e.message, 'error')
+                    }
+                }}
+                onUnlink={async (machine) => {
+                    if (!window.confirm("¿Seguro que deseas desvincular esta máquina?")) return;
+                    try {
+                        const updates = {
+                            location_id: null,
+                            location_name: null,
+                            // Keep address/zone? Maybe, but usually unlink means it's back to stock/warehouse or float.
+                            // Let's clear location specific fields.
+                        }
+                        const { error } = await supabase.from('machines').update(updates).eq('id', machine.id)
+                        if (error) throw error
+                        await db.machines.update(machine.id, updates)
+                        showToast("Máquina desvinculada.", 'success')
+                    } catch (e) {
+                        console.error(e)
+                        showToast("Error al desvincular: " + e.message, 'error')
                     }
                 }}
             />
