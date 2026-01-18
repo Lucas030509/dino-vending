@@ -6,6 +6,7 @@ import SignatureCanvas from 'react-signature-canvas'
 import { getMexicoCityDate, formatDateDDMMYYYY, calculateSmartNextDate } from '../utils/formatters'
 import { CollectionModal } from '../components/collections/CollectionModal'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import { Toast } from '../components/ui/Toast'
 import { db } from '../lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import './Collections.css'
@@ -503,12 +504,12 @@ export default function Collections() {
 
     return (
         <div className="collections-page">
-            {toast.show && (
-                <div className={`toast-notification ${toast.type}`} onClick={hideToast}>
-                    {toast.message}
-                    {toast.type === 'error' && <div style={{ fontSize: '0.8em', marginTop: 4, opacity: 0.8 }}>(Clic para cerrar)</div>}
-                </div>
-            )}
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={hideToast}
+            />
             <header className="page-header">
                 <div className="header-left">
                     <Link to="/" className="back-btn">
@@ -576,6 +577,15 @@ export default function Collections() {
                                     key={location.id}
                                     className="machine-item glass-hover"
                                     onClick={() => handleOpenModal(location)}
+                                    // A11y Attributes
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault()
+                                            handleOpenModal(location)
+                                        }
+                                    }}
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <div className="m-info">
