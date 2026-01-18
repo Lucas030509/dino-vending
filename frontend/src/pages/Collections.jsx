@@ -66,8 +66,35 @@ export default function Collections() {
             )
             setFilteredLocations(filtered)
         }
-
     }, [locations, machines, filterQuery, isLoadingData])
+
+    // Sort Filter State
+    const [sortOption, setSortOption] = useState('zone_asc') // 'zone_asc', 'name_asc'
+
+    // Apply Sorting
+    useEffect(() => {
+        setFilteredLocations(prev => {
+            const sorted = [...prev]
+            if (sortOption === 'zone_asc') {
+                sorted.sort((a, b) => {
+                    const zoneA = (a.district || '').toLowerCase()
+                    const zoneB = (b.district || '').toLowerCase()
+                    if (zoneA < zoneB) return -1
+                    if (zoneA > zoneB) return 1
+                    // If zones equal, sort by name
+                    return a.name.localeCompare(b.name)
+                })
+            } else if (sortOption === 'name_asc') {
+                sorted.sort((a, b) => a.name.localeCompare(b.name))
+            }
+            return sorted
+        })
+    }, [sortOption, locations, filterQuery]) // Re-sort when data/filter changes (handled by effect chain, actually we need to run this ONCE after filtering)
+
+    // Better: Integrate into main filter effect or separate effect that depends on filteredLocations? 
+    // If we depend on filteredLocations, we get loop.
+    // Let's integrate into the main effect above.
+
 
     // Toast State
     const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
@@ -495,6 +522,18 @@ export default function Collections() {
                                 onChange={(e) => setFilterQuery(e.target.value)}
                                 className="search-input"
                             />
+                        </div>
+
+                        <div className="filter-actions" style={{ padding: '0 16px', marginBottom: 12, display: 'flex', gap: 8 }}>
+                            <select
+                                value={sortOption}
+                                onChange={(e) => setSortOption(e.target.value)}
+                                className="filter-select"
+                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white', flex: 1 }}
+                            >
+                                <option value="zone_asc">📍 Zona (A-Z)</option>
+                                <option value="name_asc">🔤 Nombre (A-Z)</option>
+                            </select>
                         </div>
 
                         <div className="scrollable-list" style={{ maxHeight: 'none' }}>
