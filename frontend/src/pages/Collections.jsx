@@ -289,11 +289,19 @@ export default function Collections() {
                 signatureUrl = await uploadEvidence(sigBlob, sigPath)
             }
 
-            // 2. Process All Machines in parallel
-            const promises = Object.values(collectionMap).map(async (entry) => {
-                if (!entry.gross_amount) return // Skip empty entries if allowed? Or assume required. Form has required.
+            // 2. Prepare Batches
+            const collectionsBatch = []
+            const refillsBatch = []
+            const machineUpdates = [] // Array of { id, changes }
+            const machineStockUpdates = [] // For local Dexie
+
+            // Prepare Data Loop
+            Object.values(collectionMap).forEach(entry => {
+                if (!entry.gross_amount) return
 
                 const machine = selectedLocation.machines.find(m => m.id === entry.machine_id)
+                if (!machine) return; // Safety check
+
                 const gross = parseFloat(entry.gross_amount)
                 const commission = gross * (entry.commission_percent / 100)
                 const units = parseInt(entry.units_sold)
@@ -302,15 +310,14 @@ export default function Collections() {
                 const totalExp = units * (costCap + costProd)
                 const profit = gross - commission - totalExp
 
-                // Smart Next Date
                 const nextVisitDateStr = calculateSmartNextDate(
                     entry.collection_date,
                     entry.next_refill_days,
                     machine.closed_days || []
                 )
 
-                // Insert Collection
-                const { data: inserted, error } = await supabase.from('collections').insert({
+                // Add to Collections Batch
+                collectionsBatch.push({
                     tenant_id: machine.tenant_id,
                     location_id: selectedLocation.id,
                     machine_id: machine.id,
@@ -328,65 +335,92 @@ export default function Collections() {
                     notes: entry.notes,
                     created_by: user.id,
                     evidence_photo_url: photoUrl,
-                    evidence_signature_url: signatureUrl
-                }).select().single()
+                    evidence_signature_url: signatureUrl,
+                    machine_contact_email: machine.contact_email // Pass email here to use later? No, not in schema.
+                })
 
-                if (error) throw error
-
-                // --- 4. Handle Refill / Stock Updates ---
+                // Handle Stock Logic
                 let newStock = machine.current_stock_snapshot || 0
-                // Deduct Sales
                 newStock = Math.max(0, newStock - units)
 
-                // Add Refill if specified
                 if (entry.add_stock || entry.is_full) {
                     const added = parseInt(entry.add_stock || 0)
+                    const capacity = machine.capsule_capacity || 180
 
-                    // 1. Calculate final stock logic
                     if (entry.is_full) {
-                        newStock = machine.capsule_capacity || 180 // Default capacity if null
+                        newStock = capacity
                     } else {
                         newStock = newStock + added
                     }
-                    // Cap at capacity? Maybe not to avoid blocking, but logically yes.
-                    const capacity = machine.capsule_capacity || 180
                     if (newStock > capacity) newStock = capacity
 
-                    // 2. Insert Refill Record
-                    await supabase.from('refills').insert({
+                    // Add to Refills Batch
+                    refillsBatch.push({
                         tenant_id: machine.tenant_id,
                         machine_id: machine.id,
-                        previous_percentage: 0, // Not explicitly tracked here, approximation
+                        previous_percentage: 0,
                         current_percentage: Math.round((newStock / capacity) * 100),
                         quantity_added: added,
                         is_full: entry.is_full || false,
-                        refill_date: new Date().toISOString(), // Use precise time
+                        refill_date: new Date().toISOString(),
                         created_by: user.id
-                        // evidence? Could reuse collection photo if we wanted: evidence_photo_url: photoUrl
                     })
                 }
 
-                // Update Machine Stock
-                try {
-                    await supabase.from('machines').update({
-                        current_stock_snapshot: newStock,
-                        last_refill_date: (entry.add_stock || entry.is_full) ? new Date().toISOString() : machine.last_refill_date
-                    }).eq('id', machine.id)
-
-                    // Update Local Dexie DB
-                    await db.machines.update(machine.id, {
-                        current_stock_snapshot: newStock,
-                        last_refill_date: (entry.add_stock || entry.is_full) ? new Date().toISOString() : machine.last_refill_date
-                    })
-                } catch (e) { console.error(e) }
-
-                // Fire Email
-                if (machine.contact_email) {
-                    supabase.functions.invoke('send-receipt', { body: { collection_id: inserted.id } })
+                // Prepare Machine Update
+                const updatePayload = {
+                    current_stock_snapshot: newStock,
+                    last_refill_date: (entry.add_stock || entry.is_full) ? new Date().toISOString() : machine.last_refill_date
                 }
+
+                machineUpdates.push({ id: machine.id, ...updatePayload })
+                machineStockUpdates.push({ id: machine.id, ...updatePayload })
             })
 
-            await Promise.all(promises)
+            // 3. EXECUTE BATCHES
+
+            // A. Bulk Insert Collections
+            let insertedCollections = []
+            if (collectionsBatch.length > 0) {
+                const { data, error } = await supabase.from('collections').insert(collectionsBatch).select()
+                if (error) throw error
+                insertedCollections = data
+            }
+
+            // B. Bulk Insert Refills
+            if (refillsBatch.length > 0) {
+                const { error } = await supabase.from('refills').insert(refillsBatch)
+                if (error) console.error("Error bulk inserting refills:", error)
+            }
+
+            // C. Parallel Machine Updates (Still N requests, but non-blocking critical path sort of)
+            // Ideally we'd use an RPC for bulk update, but for 5-10 items Promise.all is acceptable vs complexity.
+            // We use mapLimit if list is huge, but here typically < 20 machines per loc.
+            await Promise.all(machineUpdates.map(u =>
+                supabase.from('machines').update({
+                    current_stock_snapshot: u.current_stock_snapshot,
+                    last_refill_date: u.last_refill_date
+                }).eq('id', u.id)
+            ))
+
+            // D. Local Dexie Updates
+            await db.machines.bulkUpdate(machineStockUpdates.map(u => ({
+                key: u.id,
+                changes: { current_stock_snapshot: u.current_stock_snapshot, last_refill_date: u.last_refill_date }
+            })))
+
+
+            // E. Send Emails (After success)
+            // Match inserted collections back to machines to get emails
+            insertedCollections.forEach(col => {
+                // We don't have the machine email in 'col', but we have 'col.machine_id'
+                // Find original machine
+                const m = selectedLocation.machines.find(x => x.id === col.machine_id)
+                if (m && m.contact_email) {
+                    // Fire and forget (don't await)
+                    supabase.functions.invoke('send-receipt', { body: { collection_id: col.id } }).catch(console.error)
+                }
+            })
 
             // 3. Incident Report (Shared Logic - if report active, link to... FIRST machine? or generic?)
             // We need a machine_id for the report table typically.
