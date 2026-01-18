@@ -62,6 +62,7 @@ export default function Locations() {
     const [showMachineModal, setShowMachineModal] = useState(false)
     const [showLinkModal, setShowLinkModal] = useState(false)
     const [preSelectedLocation, setPreSelectedLocation] = useState(null)
+    const [machineToUnlink, setMachineToUnlink] = useState(null)
     const fileInputRef = React.useRef(null)
 
     // Filter Logic
@@ -439,26 +440,36 @@ export default function Locations() {
                         showToast("Error al asignar: " + e.message, 'error')
                     }
                 }}
-                onUnlink={async (machine) => {
-                    if (!window.confirm("¿Seguro que deseas desvincular esta máquina?")) return;
+                onUnlink={(machine) => setMachineToUnlink(machine)}
+            />
+
+            <ConfirmationModal
+                isOpen={!!machineToUnlink}
+                onClose={() => setMachineToUnlink(null)}
+                onConfirm={async () => {
+                    if (!machineToUnlink) return
                     try {
                         const updates = {
                             location_id: null,
-                            location_name: 'Bodega / Sin Asignar', // Use a default string instead of null
-                            // Keep address/zone? Maybe, but usually unlink means it's back to stock/warehouse or float.
-                            // Let's clear location specific fields.
+                            location_name: 'Bodega / Sin Asignar',
                             address: '',
                             zone: ''
                         }
-                        const { error } = await supabase.from('machines').update(updates).eq('id', machine.id)
+                        const { error } = await supabase.from('machines').update(updates).eq('id', machineToUnlink.id)
                         if (error) throw error
-                        await db.machines.update(machine.id, updates)
+                        await db.machines.update(machineToUnlink.id, updates)
                         showToast("Máquina desvinculada.", 'success')
+                        setMachineToUnlink(null)
                     } catch (e) {
                         console.error(e)
                         showToast("Error al desvincular: " + e.message, 'error')
+                        setMachineToUnlink(null)
                     }
                 }}
+                title="Desvincular Máquina"
+                message={<span>¿Estás seguro de desvincular la máquina <strong>{machineToUnlink?.qr_code_uid || machineToUnlink?.nickname}</strong> de este punto de venta?</span>}
+                confirmText="Desvincular"
+                isDestructive={true}
             />
 
             <MachineFormModal
