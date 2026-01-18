@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Info, Image, Clock, CheckSquare, Users, Building2 } from 'lucide-react'
+import { ConfirmationModal } from '../components/ui/ConfirmationModal'
+import { Toast } from '../components/ui/Toast'
 import './Reports.css'
 
 export default function Reports() {
@@ -9,6 +11,17 @@ export default function Reports() {
     const [loading, setLoading] = useState(true)
     const [selectedImage, setSelectedImage] = useState(null)
     const [activeTab, setActiveTab] = useState('client') // 'client' | 'internal'
+
+    // Toast State
+    const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
+    const showToast = (message, type = 'info') => {
+        setToast({ show: true, message, type })
+    }
+    const hideToast = () => setToast({ ...toast, show: false })
+
+    // Resolve Confirmation State
+    const [reportToResolve, setReportToResolve] = useState(null)
+    const [processingId, setProcessingId] = useState(null)
 
     useEffect(() => {
         fetchReports()
@@ -50,36 +63,38 @@ export default function Reports() {
             setReports(enrichedReports)
         } catch (err) {
             console.error(err)
+            showToast("Error al cargar reportes: " + err.message, 'error')
         } finally {
             setLoading(false)
         }
     }
 
-    const [processingId, setProcessingId] = useState(null)
-
-    const handleResolve = async (id) => {
-        if (!window.confirm('¿Confirmas que este problema ha sido resuelto?')) return;
-        setProcessingId(id)
+    const confirmResolve = async () => {
+        if (!reportToResolve) return
+        setProcessingId(reportToResolve.id)
 
         try {
             const { error } = await supabase
                 .from('reports')
                 .update({ status: 'Resolved' })
-                .eq('id', id)
+                .eq('id', reportToResolve.id)
 
             if (error) throw error
 
             // Optimistic update locally to feel instant
             setReports(current => current.map(r =>
-                r.id === id ? { ...r, status: 'Resolved' } : r
+                r.id === reportToResolve.id ? { ...r, status: 'Resolved' } : r
             ))
+
+            showToast("Reporte marcado como resuelto", 'success')
 
             // Background refresh to be safe
             fetchReports()
         } catch (err) {
-            alert('Error al actualizar reporte: ' + err.message)
+            showToast('Error al actualizar reporte: ' + err.message, 'error')
         } finally {
             setProcessingId(null)
+            setReportToResolve(null)
         }
     }
 
@@ -93,6 +108,13 @@ export default function Reports() {
 
     return (
         <div className="reports-page">
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={hideToast}
+            />
+
             <header className="page-header">
                 <div className="header-left">
                     <Link to="/" className="back-btn">
@@ -158,7 +180,7 @@ export default function Reports() {
 
                                     <div className="r-actions">
                                         {report.status !== 'Resolved' ? (
-                                            <button className="resolve-btn" onClick={() => handleResolve(report.id)} disabled={processingId === report.id}>
+                                            <button className="resolve-btn" onClick={() => setReportToResolve(report)} disabled={processingId === report.id}>
                                                 <CheckSquare size={16} />
                                                 {processingId === report.id ? 'Guardando...' : 'Marcar Resuelto'}
                                             </button>
@@ -174,11 +196,22 @@ export default function Reports() {
             )}
 
             {selectedImage && (
-                <div className="image-modal" onClick={() => setSelectedImage(null)}>
+                <div className="image-modal" onClick={() => setSelectedImage(null)} style={{ zIndex: 2000 }}>
                     <img src={selectedImage} alt="Evidencia" />
                 </div>
             )}
 
+            <ConfirmationModal
+                isOpen={!!reportToResolve}
+                onClose={() => setReportToResolve(null)}
+                onConfirm={confirmResolve}
+                title="Confirmar Resolución"
+                message={<span>¿Confirmas que el problema con <strong>{reportToResolve?.machine_uid}</strong> ha sido resuelto?</span>}
+                confirmText="Sí, Resuelto"
+                cancelText="Cancelar"
+                isDestructive={false}
+                isLoading={!!processingId}
+            />
 
         </div>
     )

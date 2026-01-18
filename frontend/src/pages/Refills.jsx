@@ -6,9 +6,11 @@ import RefillFormModal from '../components/refills/RefillFormModal'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { db } from '../lib/db'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Toast } from '../components/ui/Toast' // Add import
 import './Refills.css'
 
 export default function Refills() {
+    // Offset standard imports
     // Offline Data
     const locationsData = useLiveQuery(() => db.locations.toArray())
     const machinesData = useLiveQuery(() => db.machines.orderBy('location_name').toArray())
@@ -27,6 +29,13 @@ export default function Refills() {
 
     const [viewMode, setViewMode] = useState('list') // 'list' or 'history'
     const [filterQuery, setFilterQuery] = useState('')
+
+    // Toast State
+    const [toast, setToast] = useState({ show: false, message: '', type: 'info' })
+    const showToast = (message, type = 'info') => {
+        setToast({ show: true, message, type })
+    }
+    const hideToast = () => setToast({ ...toast, show: false })
 
     // Group Machines by Location
     const [groupedLocations, setGroupedLocations] = useState([])
@@ -97,7 +106,7 @@ export default function Refills() {
 
     const handleOpenRefillModal = (location) => {
         if (location.is_orphan) {
-            alert("Estas máquinas no tienen una ubicación asignada. Por favor ve a la pestaña Máquinas y edítalas para asignarles una ubicación.")
+            showToast("Estas máquinas no tienen una ubicación asignada. Por favor ve a la pestaña Máquinas y edítalas para asignarles una ubicación.", 'error')
             return
         }
         setSelectedLocation(location)
@@ -106,6 +115,12 @@ export default function Refills() {
 
     return (
         <div className="refills-page">
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={hideToast}
+            />
             <header className="page-header">
                 <div className="header-left">
                     <Link to="/" className="back-btn">
