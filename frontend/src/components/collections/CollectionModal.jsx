@@ -213,28 +213,26 @@ const CollectionModal = ({
                             </div>
                         )}
                     </div>
-            </div>
+                    <div className="modal-footer">
+                        <div className="profit-summary">
+                            <span className="label">Ganancia Neta Estimada</span>
+                            <span className="highlight">${totalProfit.toFixed(2)}</span>
+                        </div>
 
-            <div className="modal-footer">
-                <div className="profit-summary">
-                    <span className="label">Ganancia Neta Estimada</span>
-                    <span className="highlight">${totalProfit.toFixed(2)}</span>
-                </div>
-
-                <div className="modal-actions">
-                    <button type="button" className="btn-secondary" onClick={onClose}>
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-primary full-width"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? 'Guardando...' : 'Guardar Corte Global'}
-                    </button>
-                </div>
-            </div>
-        </form>
+                        <div className="modal-actions">
+                            <button type="button" className="btn-secondary" onClick={onClose}>
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn-primary full-width"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Guardando...' : 'Guardar Corte Global'}
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div >
         </div >
     )
