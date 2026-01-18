@@ -25,7 +25,7 @@ export function LinkMachineModal({ isOpen, onClose, location, onLink, onCreateNe
     })
 
     return (
-        <div className="modal-overlay">
+        <div className="modal-overlay" style={{ zIndex: 1050 }}>
             <div className="glass modal-content" style={{ maxWidth: '600px' }}>
                 <h3 style={{ marginBottom: '20px' }}>Agregar Máquina a {location?.name}</h3>
 

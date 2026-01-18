@@ -444,9 +444,11 @@ export default function Locations() {
                     try {
                         const updates = {
                             location_id: null,
-                            location_name: null,
+                            location_name: 'Bodega / Sin Asignar', // Use a default string instead of null
                             // Keep address/zone? Maybe, but usually unlink means it's back to stock/warehouse or float.
                             // Let's clear location specific fields.
+                            address: '',
+                            zone: ''
                         }
                         const { error } = await supabase.from('machines').update(updates).eq('id', machine.id)
                         if (error) throw error
