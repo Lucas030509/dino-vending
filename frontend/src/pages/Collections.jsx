@@ -336,8 +336,7 @@ export default function Collections() {
                     notes: entry.notes,
                     created_by: user.id,
                     evidence_photo_url: photoUrl,
-                    evidence_signature_url: signatureUrl,
-                    machine_contact_email: machine.contact_email // Pass email here to use later? No, not in schema.
+                    evidence_signature_url: signatureUrl
                 })
 
                 // Handle Stock Logic
