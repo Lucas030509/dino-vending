@@ -642,6 +642,7 @@ export default function Collections() {
                                         <th>Fecha</th>
                                         <th>Ubicación</th>
                                         <th>Monto Bruto</th>
+                                        <th>Costo Prod.</th>
                                         <th>Comisión</th>
                                         <th>Ganancia Final</th>
                                         <th style={{ width: 50 }}></th>
@@ -653,6 +654,7 @@ export default function Collections() {
                                             <td>{formatDateDDMMYYYY(col.collection_date)}</td>
                                             <td>{col.machines?.location_name || 'Desconocida'}</td>
                                             <td className="amount">${parseFloat(col.gross_amount || 0).toFixed(2)}</td>
+                                            <td className="amount commission">-${((parseFloat(col.unit_cost_product || 0) + parseFloat(col.unit_cost_capsule || 0)) * parseInt(col.units_sold || 0)).toFixed(2)}</td>
                                             <td className="amount commission">-${parseFloat(col.commission_amount || 0).toFixed(2)}</td>
                                             <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
                                                 ${parseFloat(col.profit_amount ?? col.net_revenue ?? 0).toFixed(2)}
@@ -798,6 +800,10 @@ export default function Collections() {
                                         <span className="val money">${parseFloat(viewingCollection.gross_amount).toFixed(2)}</span>
                                     </div>
                                     <div className="detail-row">
+                                        <span className="label">Costo Producto:</span>
+                                        <span className="val expense">-${((parseFloat(viewingCollection.unit_cost_product || 0) + parseFloat(viewingCollection.unit_cost_capsule || 0)) * parseInt(viewingCollection.units_sold || 0)).toFixed(2)}</span>
+                                    </div>
+                                    <div className="detail-row">
                                         <span className="label">Comisión ({viewingCollection.commission_percent_snapshot}%):</span>
                                         <span className="val commission">-${parseFloat(viewingCollection.commission_amount).toFixed(2)}</span>
                                     </div>
@@ -847,8 +853,6 @@ export default function Collections() {
                 )
             }
 
-
-
             {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={!!collectionToDelete}
@@ -866,6 +870,6 @@ export default function Collections() {
                 isDestructive={true}
                 isLoading={isDeleting}
             />
-        </div >
+        </div>
     )
 }
