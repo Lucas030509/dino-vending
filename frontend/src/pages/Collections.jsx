@@ -35,6 +35,23 @@ export default function Collections() {
 
     // Collection State: Map { machineId: { ...data } }
     const [collectionMap, setCollectionMap] = useState({})
+    const [globalProductCost, setGlobalProductCost] = useState(2.5) // Default
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
+                if (profile?.tenant_id) {
+                    const { data: tenant } = await supabase.from('tenants').select('product_unit_cost').eq('id', profile.tenant_id).single()
+                    if (tenant?.product_unit_cost) {
+                        setGlobalProductCost(tenant.product_unit_cost)
+                    }
+                }
+            }
+        }
+        fetchSettings()
+    }, [])
 
     // --- PROCESS DATA: GROUP MACHINES BY LOCATION ---
     useEffect(() => {
@@ -148,7 +165,10 @@ export default function Collections() {
                 notes: '',
                 units_sold: 0,
                 cost_capsule: 1, // Default, maybe fetch from settings later
-                cost_product: 2.5,
+                units_sold: 0,
+                cost_capsule: 1, // Default
+                cost_product: globalProductCost,
+                commission_percent: isRent ? 0 : (m.commission_percent || 0),
                 commission_percent: isRent ? 0 : (m.commission_percent || 0),
                 is_rent: isRent
             }
@@ -673,6 +693,7 @@ export default function Collections() {
                     onSubmit={handleRegisterCollection}
                     collectionMap={collectionMap}
                     onUpdateCollection={handleUpdateCollection}
+                    productCost={globalProductCost}
                     totalProfit={totalProfit}
                     reportForm={reportForm}
                     setReportForm={setReportForm}

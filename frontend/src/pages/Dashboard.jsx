@@ -28,6 +28,7 @@ export default function Dashboard({ isSuperAdmin }) {
   // Branding State
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [brandColor, setBrandColor] = useState('#10b981')
+  const [productCost, setProductCost] = useState(2.5) // Default Cost
   const [logoUrl, setLogoUrl] = useState('')
   const [logoFile, setLogoFile] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
@@ -272,7 +273,7 @@ export default function Dashboard({ isSuperAdmin }) {
     if (profile?.tenant_id) {
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('brand_color, logo_url')
+        .select('brand_color, logo_url, product_unit_cost')
         .eq('id', profile.tenant_id)
         .single()
 
@@ -284,6 +285,7 @@ export default function Dashboard({ isSuperAdmin }) {
           root.style.setProperty('--primary-glow', tenant.brand_color + '66')
         }
         if (tenant.logo_url) setLogoUrl(tenant.logo_url)
+        if (tenant.product_unit_cost !== undefined) setProductCost(tenant.product_unit_cost)
       }
     }
   }
@@ -321,7 +323,8 @@ export default function Dashboard({ isSuperAdmin }) {
         .from('tenants')
         .update({
           brand_color: brandColor,
-          logo_url: finalLogoUrl
+          logo_url: finalLogoUrl,
+          product_unit_cost: productCost
         })
         .eq('id', profile.tenant_id)
 
@@ -575,6 +578,21 @@ export default function Dashboard({ isSuperAdmin }) {
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="input-group">
+                  <label>Costo Producto Promedio ($)</label>
+                  <p style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '-5px', marginBottom: '8px' }}>
+                    Usado para calcular ganancias (Costo x Relleno)
+                  </p>
+                  <input
+                    type="number"
+                    step="0.10"
+                    value={productCost}
+                    onChange={e => setProductCost(parseFloat(e.target.value))}
+                    className="admin-input" // Reusing styling
+                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                  />
                 </div>
 
                 <div className="input-group settings-integration-box">
