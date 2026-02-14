@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, DollarSign, Calendar, TrendingUp, AlertCircle, CheckCircle2, MoreVertical, Plus, Trash2, Search, ArrowDownToLine, Camera, Eraser, Eye } from 'lucide-react'
 import SignatureCanvas from 'react-signature-canvas'
+import { format, parseISO, startOfMonth, subMonths, startOfYear } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { getMexicoCityDate, formatDateDDMMYYYY, calculateSmartNextDate } from '../utils/formatters'
 import { CollectionModal } from '../components/collections/CollectionModal'
 import { ConfirmationModal } from '../components/ui/ConfirmationModal'
@@ -16,7 +18,33 @@ export default function Collections() {
     // Offline Data
     const locationsData = useLiveQuery(() => db.locations.toArray())
     const machinesData = useLiveQuery(() => db.machines.toArray())
-    const collectionsData = useLiveQuery(() => db.collections.orderBy('collection_date').reverse().limit(50).toArray())
+
+    // Time Filter State
+    const [timeFilter, setTimeFilter] = useState('all') // 'month', 'bimester', 'trimester', 'semester', 'year', 'all'
+
+    const collectionsData = useLiveQuery(async () => {
+        let query = db.collections.orderBy('collection_date').reverse()
+
+        if (timeFilter !== 'all') {
+            const now = new Date()
+            let startDate
+
+            switch (timeFilter) {
+                case 'month': startDate = startOfMonth(now); break;
+                case 'bimester': startDate = subMonths(now, 2); break;
+                case 'trimester': startDate = subMonths(now, 3); break;
+                case 'semester': startDate = subMonths(now, 6); break;
+                case 'year': startDate = startOfYear(now); break;
+                default: startDate = null
+            }
+
+            if (startDate) {
+                const isoStart = startDate.toISOString()
+                return query.filter(c => c.collection_date >= isoStart).toArray()
+            }
+        }
+        return query.limit(150).toArray()
+    }, [timeFilter])
 
     const locations = locationsData || []
     const machines = machinesData || []
@@ -632,55 +660,110 @@ export default function Collections() {
                 ) : (
                     /* Right Panel: Recent History */
                     <div className="panel history-panel glass" style={{ width: '100%', maxWidth: 'none' }}>
-                        <div className="panel-header">
-                            <h3>Historial Reciente</h3>
+                        <div className="panel-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                <h3>Historial Reciente</h3>
+                                <select
+                                    className="filter-select"
+                                    value={timeFilter}
+                                    onChange={(e) => setTimeFilter(e.target.value)}
+                                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '5px 10px', borderRadius: 6 }}
+                                >
+                                    <option value="month">Este Mes</option>
+                                    <option value="bimester">Últimos 2 Meses</option>
+                                    <option value="trimester">Últimos 3 Meses</option>
+                                    <option value="semester">Últimos 6 Meses</option>
+                                    <option value="year">Este Año</option>
+                                    <option value="all">Todo el Historial</option>
+                                </select>
+                            </div>
                         </div>
                         <div className="table-responsive">
-                            <table className="history-table">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Ubicación</th>
-                                        <th>Monto Bruto</th>
-                                        <th>Costo Prod.</th>
-                                        <th>Comisión</th>
-                                        <th>Ganancia Final</th>
-                                        <th style={{ width: 50 }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {collections.map(col => (
-                                        <tr key={col.id}>
-                                            <td>{formatDateDDMMYYYY(col.collection_date)}</td>
-                                            <td>{col.machines?.location_name || 'Desconocida'}</td>
-                                            <td className="amount">${parseFloat(col.gross_amount || 0).toFixed(2)}</td>
-                                            <td className="amount commission">-${((parseFloat(col.unit_cost_product || 0) + parseFloat(col.unit_cost_capsule || 0)) * parseInt(col.units_sold || 0)).toFixed(2)}</td>
-                                            <td className="amount commission">-${parseFloat(col.commission_amount || 0).toFixed(2)}</td>
-                                            <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
-                                                ${parseFloat(col.profit_amount ?? col.net_revenue ?? 0).toFixed(2)}
-                                            </td>
-                                            <td>
-                                                <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle / Reenviar Correo">
-                                                    <Eye size={14} />
-                                                </button>
-                                                <button onClick={(e) => handleDeleteCollection(e, col)} className="delete-btn-mini" title="Eliminar Corte">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {isLoadingData && (
-                                        <tr>
-                                            <td colSpan="6" className="empty-cell">Cargando historial...</td>
-                                        </tr>
-                                    )}
-                                    {!isLoadingData && collections.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="empty-cell">No hay cortes registrados aún.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                            {(() => {
+                                // Grouping Logic
+                                const groups = []
+                                let currentGroup = null
+
+                                collections.forEach(col => {
+                                    const date = parseISO(col.collection_date)
+                                    const groupKey = format(date, 'MMMM yyyy', { locale: es })
+                                    // Capitalize first letter
+                                    const groupTitle = groupKey.charAt(0).toUpperCase() + groupKey.slice(1)
+
+                                    if (!currentGroup || currentGroup.title !== groupTitle) {
+                                        currentGroup = { title: groupTitle, items: [], totalProfit: 0 }
+                                        groups.push(currentGroup)
+                                    }
+                                    currentGroup.items.push(col)
+                                    // Sum profit for header if needed (optional)
+                                    currentGroup.totalProfit += (col.profit_amount ?? col.net_revenue ?? 0)
+                                })
+
+                                if (groups.length === 0) {
+                                    return (
+                                        <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>
+                                            {isLoadingData ? 'Cargando...' : 'No hay cortes en el periodo seleccionado.'}
+                                        </div>
+                                    )
+                                }
+
+                                return groups.map((group, idx) => (
+                                    <div key={idx} className="month-group" style={{ marginBottom: 20 }}>
+                                        <div className="group-header" style={{
+                                            background: 'rgba(255,255,255,0.05)',
+                                            padding: '8px 12px',
+                                            borderRadius: '6px 6px 0 0',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                            marginTop: idx > 0 ? 15 : 0
+                                        }}>
+                                            <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{group.title}</span>
+                                            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                                                Total Ganancia: <span style={{ color: '#10b981' }}>${group.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </span>
+                                        </div>
+                                        <table className="history-table" style={{ marginTop: 0 }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Ubicación</th>
+                                                    <th>Monto Bruto</th>
+                                                    <th>Costo Prod.</th>
+                                                    <th>Comisión</th>
+                                                    <th>Ganancia Final</th>
+                                                    <th style={{ width: 50 }}></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {group.items.map(col => (
+                                                    <tr key={col.id}>
+                                                        <td>{formatDateDDMMYYYY(col.collection_date)}</td>
+                                                        <td>{col.machines?.location_name || 'Desconocida'}</td>
+                                                        <td className="amount">${parseFloat(col.gross_amount || 0).toFixed(2)}</td>
+                                                        <td className="amount commission">-${((parseFloat(col.unit_cost_product || 0) + parseFloat(col.unit_cost_capsule || 0)) * parseInt(col.units_sold || 0)).toFixed(2)}</td>
+                                                        <td className="amount commission">-${parseFloat(col.commission_amount || 0).toFixed(2)}</td>
+                                                        <td className={`amount ${col.profit_amount >= 0 ? 'profit' : 'commission'}`}>
+                                                            ${parseFloat(col.profit_amount ?? col.net_revenue ?? 0).toFixed(2)}
+                                                        </td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                                <button onClick={() => setViewingCollection(col)} className="view-btn-mini" title="Ver Detalle">
+                                                                    <Eye size={14} />
+                                                                </button>
+                                                                <button onClick={(e) => handleDeleteCollection(e, col)} className="delete-btn-mini" title="Eliminar">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ))
+                            })()}
                         </div>
                     </div>
                 )}
