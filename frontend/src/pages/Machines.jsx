@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, PlusCircle, Search, Upload, CheckCircle2, Printer, CheckSquare, Square, LayoutGrid, Store, Layers } from 'lucide-react'
@@ -70,13 +70,15 @@ export default function Machines() {
     // Fetch call removed in favor of useLiveQuery
 
 
-    const toggleSelection = (e, id) => {
+    const toggleSelection = useCallback((e, id) => {
         e.stopPropagation()
-        const newSet = new Set(selectedIds)
-        if (newSet.has(id)) newSet.delete(id)
-        else newSet.add(id)
-        setSelectedIds(newSet)
-    }
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(id)) newSet.delete(id)
+            else newSet.add(id)
+            return newSet
+        })
+    }, [])
 
     const selectAll = () => {
         if (selectedIds.size === filteredMachines.length && filteredMachines.length > 0) {
@@ -133,7 +135,7 @@ export default function Machines() {
 
     // --- Actions ---
 
-    const handleToggleStatus = async (e, machine) => {
+    const handleToggleStatus = useCallback(async (e, machine) => {
         e.stopPropagation()
         const newStatus = machine.current_status === 'Active' ? 'Inactive' : 'Active'
         const { error } = await supabase
@@ -144,9 +146,9 @@ export default function Machines() {
         if (!error) {
             // Success - sync will update UI eventually
         }
-    }
+    }, [])
 
-    const handleDeleteMachine = async (e, machine) => {
+    const handleDeleteMachine = useCallback(async (e, machine) => {
         e.stopPropagation()
         const { count, error: countError } = await supabase
             .from('collections')
@@ -164,7 +166,7 @@ export default function Machines() {
         }
 
         setMachineToDelete(machine)
-    }
+    }, [])
 
     const handleConfirmDelete = async () => {
         if (!machineToDelete) return
@@ -186,11 +188,11 @@ export default function Machines() {
         }
     }
 
-    const handleEdit = (machine) => {
+    const handleEdit = useCallback((machine) => {
         setEditingMachine(machine)
         setEditingId(machine.id)
         setShowModal(true)
-    }
+    }, [])
 
     const handleSaveMachine = async (formData) => {
         try {
@@ -572,7 +574,7 @@ export default function Machines() {
                                         key={machine.id}
                                         machine={machine}
                                         isSelected={selectedIds.has(machine.id)}
-                                        onSelect={(e) => toggleSelection(e, machine.id)}
+                                        onSelect={toggleSelection}
                                         onEdit={handleEdit}
                                         onDelete={handleDeleteMachine}
                                         onToggleStatus={handleToggleStatus}
@@ -614,7 +616,7 @@ export default function Machines() {
                                                     key={machine.id}
                                                     machine={machine}
                                                     isSelected={selectedIds.has(machine.id)}
-                                                    onSelect={(e) => toggleSelection(e, machine.id)}
+                                                    onSelect={toggleSelection}
                                                     onEdit={handleEdit}
                                                     onDelete={handleDeleteMachine}
                                                     onToggleStatus={handleToggleStatus}
