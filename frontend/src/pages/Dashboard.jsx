@@ -581,8 +581,8 @@ export default function Dashboard({ isSuperAdmin }) {
                 </div>
 
                 <div className="input-group">
-                  <label>Costo Producto Promedio ($)</label>
-                  <p style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: '-5px', marginBottom: '8px' }}>
+                  <label style={{ color: 'var(--text-main)', fontWeight: 600 }}>Costo Producto Promedio ($)</label>
+                  <p style={{ fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '-5px', marginBottom: '8px' }}>
                     Usado para calcular ganancias (Costo x Relleno)
                   </p>
                   <input
@@ -590,20 +590,28 @@ export default function Dashboard({ isSuperAdmin }) {
                     step="0.10"
                     value={productCost}
                     onChange={e => setProductCost(parseFloat(e.target.value))}
-                    className="admin-input" // Reusing styling
-                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                    className="admin-input"
+                    // Reusing styling
+                    style={{
+                      background: 'var(--bg-color)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-main)',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      width: '100%'
+                    }}
                   />
                 </div>
 
-                <div className="input-group settings-integration-box">
+                <div className="input-group settings-integration-box" style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)' }}>
                   <div className="settings-integration-header">
-                    <Map size={20} className="teal" />
-                    <label className="integration-label">Integración Google Maps</label>
+                    <Map size={20} style={{ color: 'var(--primary-color)' }} />
+                    <label className="integration-label" style={{ color: 'var(--text-main)' }}>Integración Google Maps</label>
                   </div>
-                  <p className="integration-desc">
+                  <p className="integration-desc" style={{ color: 'var(--text-dim)' }}>
                     Vincula tu cuenta para sincronizar rutas automáticamente con tu calendario (Próximamente).
                   </p>
-                  <button type="button" className="google-btn" onClick={() => alert('La integración completa estará disponible pronto. Por ahora usamos enlaces profundos seguros.')}>
+                  <button type="button" className="google-btn" onClick={() => alert('La integración completa estará disponible pronto. Por ahora usamos enlaces profundos seguros.')} style={{ border: '1px solid var(--border-color)' }}>
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" width="16" />
                     Conectar cuenta de Google
                   </button>

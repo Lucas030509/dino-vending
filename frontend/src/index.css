@@ -126,6 +126,9 @@ h3 {
   animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   min-width: 300px;
   max-width: 400px;
+  width: auto;
+  height: auto;
+  top: auto;
   cursor: pointer;
 }
 
@@ -136,6 +139,7 @@ h3 {
     bottom: 20px;
     /* Mobile: Bottom Center spread */
     min-width: unset;
+    max-width: none;
   }
 }
 
@@ -150,7 +154,6 @@ h3 {
   background: #ffffff;
   border-left: 4px solid var(--success-color);
   color: var(--text-main);
-  /* Remove overrides causing positioning issues if any, keep simple */
 }
 
 .toast-notification.error {
