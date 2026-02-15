@@ -1,11 +1,10 @@
 /* src/pages/Refills.css */
 .refills-page {
-    padding: 30px;
-    max-width: 1200px;
+    padding: 24px 32px 80px 32px;
+    max-width: 1600px;
     margin: 0 auto;
     min-height: 100vh;
-    padding-bottom: 80px;
-    color: white;
+    color: var(--text-main);
 }
 
 .refills-header {
@@ -31,9 +30,9 @@
 }
 
 .filter-input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     padding: 10px 16px;
     border-radius: 12px;
     font-size: 0.9rem;
@@ -43,7 +42,7 @@
 
 .filter-input:focus {
     border-color: var(--primary-color);
-    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px var(--primary-glow);
 }
 
 .refills-table-container {
@@ -59,33 +58,39 @@
 .refills-table th {
     text-align: left;
     padding: 16px;
-    color: #94a3b8;
+    color: var(--text-dim);
     font-weight: 600;
     font-size: 0.9rem;
 }
 
 .refills-table tr {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--panel-color);
     transition: background 0.2s;
 }
 
 .refills-table tr:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .refills-table td {
     padding: 16px;
     vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .refills-table td:first-child {
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
+    border-left: 1px solid var(--border-color);
 }
 
 .refills-table td:last-child {
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
+    border-right: 1px solid var(--border-color);
 }
 
 .machine-info-cell {
@@ -95,12 +100,12 @@
 
 .machine-name {
     font-weight: 600;
-    color: #f1f5f9;
+    color: var(--text-main);
 }
 
 .machine-addr {
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--text-dim);
 }
 
 .refill-badge {
@@ -146,16 +151,16 @@
 
 .field-group label {
     display: block;
-    color: #94a3b8;
+    color: var(--text-dim);
     font-size: 0.9rem;
     margin-bottom: 8px;
 }
 
 .refill-input {
     width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     padding: 12px;
     border-radius: 8px;
     font-size: 1rem;
@@ -163,13 +168,14 @@
 
 /* STOCK BAR VISUALIZATION */
 .stock-preview {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--panel-color);
     padding: 15px;
     border-radius: 12px;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 20px;
+    border: 1px solid var(--border-color);
 }
 
 .stock-info {
@@ -178,7 +184,8 @@
 
 .stock-bar-bg {
     height: 10px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.05);
+    /* dark mode compat handled by opacity/color choice or separate var */
     border-radius: 5px;
     margin-top: 8px;
     overflow: hidden;
@@ -191,7 +198,7 @@
 }
 
 .photo-preview-box {
-    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border: 2px dashed var(--border-color);
     border-radius: 12px;
     height: 140px;
     display: flex;
@@ -199,9 +206,10 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    color: #64748b;
+    color: var(--text-dim);
     overflow: hidden;
     position: relative;
+    background: var(--bg-color);
 }
 
 .photo-preview-box:hover {
@@ -260,10 +268,10 @@
     }
 
     .refill-card {
-        background: rgba(30, 41, 59, 0.4);
-        /* Glass dark */
+        background: var(--panel-color);
+        /* Glass panel */
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border-color);
         border-radius: 16px;
         padding: 16px;
         position: relative;
@@ -278,92 +286,95 @@
         left: 0;
         right: 0;
         height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        background: linear-gradient(90deg, transparent, var(--border-color), transparent);
     }
 
-    .card-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 15px;
-    }
+}
 
-    .card-info h4 {
-        margin: 0;
-        color: #f8fafc;
-        font-size: 1.05rem;
-        font-weight: 600;
-    }
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
 
-    .card-info p {
-        margin: 4px 0 0;
-        color: #94a3b8;
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
+.card-info h4 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1.05rem;
+    font-weight: 600;
+}
 
-    .card-status-badge {
-        font-size: 0.75rem;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #cbd5e1;
-        font-weight: 500;
-    }
+.card-info p {
+    margin: 4px 0 0;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
 
-    .card-stats {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        padding: 12px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        margin-bottom: 12px;
-    }
+.card-status-badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: var(--bg-color);
+    color: var(--text-dim);
+    font-weight: 500;
+}
 
-    .stat-block label {
-        display: block;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #64748b;
-        margin-bottom: 4px;
-    }
+.card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-color);
+    /* Was black-alpha */
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
 
-    .stat-block .value {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #f1f5f9;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
+.stat-block label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
 
-    .stock-indicator-mobile {
-        margin-top: 6px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 2px;
-        width: 100%;
-        overflow: hidden;
-    }
+.stat-block .value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 
-    .indicator-fill {
-        height: 100%;
-        border-radius: 2px;
-    }
+.stock-indicator-mobile {
+    margin-top: 6px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 2px;
+    width: 100%;
+    overflow: hidden;
+}
 
-    .card-actions {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-    }
+.indicator-fill {
+    height: 100%;
+    border-radius: 2px;
+}
 
-    .card-actions a {
-        font-size: 0.9rem;
-    }
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.card-actions a {
+    font-size: 0.9rem;
+}
 }
