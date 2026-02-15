@@ -542,84 +542,148 @@ export default function Dashboard({ isSuperAdmin }) {
 
 
 
-      {/* Settings Modal */}
+      {/* Settings Modal - Redesigned */}
       {
         showSettingsModal && (
           <div className="modal-overlay">
-            <div className="glass modal-content settings-modal">
-              <h3>Configuración de Marca</h3>
-              <form onSubmit={handleSaveSettings}>
-                <div className="input-group">
-                  <label>Color de Marca</label>
-                  <div className="color-picker-wrapper">
-                    <input
-                      type="color"
-                      value={brandColor}
-                      onChange={e => setBrandColor(e.target.value)}
-                      className="color-input"
-                    />
-                    <span className="color-value">{brandColor}</span>
-                  </div>
-                </div>
+            <div className="glass modal-content settings-modal-refined" style={{ maxWidth: '500px', width: '90%', padding: '0' }}>
+              <div className="modal-header-refined" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>Configuración de Marca</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-dim)' }}>Personaliza la apariencia y parámetros de tu negocio.</p>
+              </div>
 
-                <div className="input-group">
-                  <label>Logotipo del Negocio</label>
+              <form onSubmit={handleSaveSettings} style={{ padding: '24px' }}>
 
-                  <div className="file-upload-wrapper">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => setLogoFile(e.target.files[0])}
-                      className="file-input"
-                    />
-                    {logoUrl && !logoFile && (
-                      <div className="current-logo-preview">
-                        <img src={logoUrl} alt="Current Logo" />
+                {/* Visual Identity Section */}
+                <div className="settings-section" style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em', marginBottom: '16px' }}>Identidad Visual</h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="input-group-clean">
+                      <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Color Principal</label>
+                      <div className="color-picker-styled" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-color)' }}>
+                        <input
+                          type="color"
+                          value={brandColor}
+                          onChange={e => setBrandColor(e.target.value)}
+                          style={{ width: '32px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0, background: 'none' }}
+                        />
+                        <span style={{ fontSize: '0.9rem', fontFamily: 'monospace', color: 'var(--text-main)' }}>{brandColor}</span>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="input-group-clean">
+                      <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-main)' }}>Logotipo</label>
+                      <div className="file-upload-styled" style={{ position: 'relative' }}>
+                        <label htmlFor="logo-upload" className="file-upload-trigger" style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '50px',
+                          border: '1px dashed var(--border-color)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: 'var(--bg-color)',
+                          color: 'var(--text-dim)',
+                          fontSize: '0.85rem'
+                        }}>
+                          {logoFile ? (
+                            <span style={{ color: 'var(--primary-color)' }}>Archivo seleccionado</span>
+                          ) : logoUrl ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img src={logoUrl} alt="Logo" style={{ height: '20px', width: 'auto' }} />
+                              <span>Cambiar</span>
+                            </div>
+                          ) : (
+                            <span>Subir Imagen...</span>
+                          )}
+                        </label>
+                        <input
+                          id="logo-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={e => setLogoFile(e.target.files[0])}
+                          style={{ display: 'none' }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="input-group">
-                  <label style={{ color: 'var(--text-main)', fontWeight: 600 }}>Costo Producto Promedio ($)</label>
-                  <p style={{ fontSize: '0.8em', color: 'var(--text-dim)', marginTop: '-5px', marginBottom: '8px' }}>
-                    Usado para calcular ganancias (Costo x Relleno)
-                  </p>
-                  <input
-                    type="number"
-                    step="0.10"
-                    value={productCost}
-                    onChange={e => setProductCost(parseFloat(e.target.value))}
-                    className="admin-input"
-                    // Reusing styling
-                    style={{
-                      background: 'var(--bg-color)',
+                {/* Finance Section */}
+                <div className="settings-section" style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em', marginBottom: '16px' }}>Finanzas</h4>
+                  <div className="input-group-clean">
+                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '4px', color: 'var(--text-main)' }}>Costo Producto Promedio</label>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: '0 0 8px 0' }}>Costo estimado por relleno para calcular ganancias.</p>
+
+                    <div className="currency-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <span style={{ position: 'absolute', left: '12px', color: 'var(--text-dim)' }}>$</span>
+                      <input
+                        type="number"
+                        step="0.10"
+                        value={productCost}
+                        onChange={e => setProductCost(parseFloat(e.target.value))}
+                        placeholder="0.00"
+                        style={{
+                          width: '100%',
+                          padding: '10px 10px 10px 25px', /* Left padding for $ */
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          background: 'var(--bg-color)',
+                          color: 'var(--text-main)',
+                          fontSize: '1rem'
+                        }}
+                      />
+                      <span style={{ position: 'absolute', right: '12px', color: 'var(--text-dim)', fontSize: '0.8rem' }}>MXN</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Integration Section */}
+                <div className="settings-section integration-section">
+                  <div className="integration-box" style={{
+                    padding: '16px',
+                    background: 'var(--bg-color)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="icon-box-google" style={{ width: '36px', height: '36px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                      </div>
+                      <div className="integration-info">
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>Google Maps</label>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Sincronización de rutas</span>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => alert('Próximamente')} style={{
+                      background: 'transparent',
                       border: '1px solid var(--border-color)',
-                      color: 'var(--text-main)',
-                      padding: '10px',
-                      borderRadius: '8px',
-                      width: '100%'
-                    }}
-                  />
-                </div>
-
-                <div className="input-group settings-integration-box" style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)' }}>
-                  <div className="settings-integration-header">
-                    <Map size={20} style={{ color: 'var(--primary-color)' }} />
-                    <label className="integration-label" style={{ color: 'var(--text-main)' }}>Integración Google Maps</label>
+                      color: 'var(--primary-color)',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}>
+                      Conectar
+                    </button>
                   </div>
-                  <p className="integration-desc" style={{ color: 'var(--text-dim)' }}>
-                    Vincula tu cuenta para sincronizar rutas automáticamente con tu calendario (Próximamente).
-                  </p>
-                  <button type="button" className="google-btn" onClick={() => alert('La integración completa estará disponible pronto. Por ahora usamos enlaces profundos seguros.')} style={{ border: '1px solid var(--border-color)' }}>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" width="16" />
-                    Conectar cuenta de Google
-                  </button>
                 </div>
 
-                <div className="modal-actions">
-                  <button type="button" onClick={() => setShowSettingsModal(false)} className="btn-secondary">Cancelar</button>
-                  <button type="submit" className="btn-primary" disabled={savingSettings}>
+                <div className="modal-actions" style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setShowSettingsModal(false)} className="btn-secondary" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontWeight: 500 }}>Cancelar</button>
+                  <button type="submit" className="btn-primary" disabled={savingSettings} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', background: 'var(--primary-color)', color: 'white', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px var(--primary-glow)' }}>
                     {savingSettings ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </div>
