@@ -1,26 +1,25 @@
+/* Admin Dashboard - Light Theme V3 */
 :root {
-    --admin-primary: #8b5cf6;
-    --admin-bg: #0f172a;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --admin-primary: var(--primary-color);
+    --admin-bg: var(--bg-color);
 }
 
 .admin-dashboard {
     padding: 30px;
-    color: white;
+    color: var(--text-main);
     min-height: 100vh;
-    background: radial-gradient(circle at top right, #312e81 0%, #0f172a 60%, #020617 100%);
-    font-family: 'Inter', sans-serif;
+    background: var(--bg-color);
+    font-family: inherit;
 }
 
-/* GLASSMORPHISM UTILS */
+/* CARDS / GLASS */
 .glass {
-    background: var(--glass-bg);
+    background: var(--panel-color);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 /* HEADER */
@@ -36,14 +35,11 @@
     margin: 0;
     font-weight: 800;
     letter-spacing: -1px;
+    color: var(--text-main);
 }
 
 .brand h1 span {
-    color: var(--admin-primary);
-    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--primary-color);
 }
 
 .badge-god {
@@ -54,6 +50,7 @@
     font-weight: 800;
     margin-left: 12px;
     vertical-align: middle;
+    color: white;
     box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
 }
 
@@ -77,33 +74,34 @@ button:active {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: var(--primary-color);
     color: white;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .btn-primary:hover {
     filter: brightness(1.1);
-    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 6px 16px var(--primary-glow);
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: white;
+    color: var(--text-dim);
+    border: 1px solid var(--border-color);
     padding: 8px 16px;
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #f9fafb;
+    color: var(--text-main);
+    border-color: var(--primary-color);
 }
 
 .logout-btn {
-    background: rgba(239, 68, 68, 0.1);
+    background: #fef2f2;
     color: #ef4444;
     padding: 8px 16px;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    border: 1px solid #fecaca;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -125,6 +123,9 @@ button:active {
 .stat-card {
     padding: 24px;
     align-items: flex-start;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
 }
 
 .stat-card .icon {
@@ -134,18 +135,18 @@ button:active {
 }
 
 .icon.purple {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
 }
 
 .icon.blue {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
 }
 
 .icon.green {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
 }
 
 .stat-content {
@@ -154,7 +155,7 @@ button:active {
 }
 
 .stat-card .label {
-    color: #94a3b8;
+    color: var(--text-dim);
     font-size: 0.9rem;
     margin-bottom: 4px;
 }
@@ -162,7 +163,7 @@ button:active {
 .stat-card .value {
     font-size: 2rem;
     font-weight: 700;
-    color: white;
+    color: var(--text-main);
 }
 
 /* CONTENT & TABLE */
@@ -174,6 +175,7 @@ button:active {
     margin: 0;
     font-weight: 600;
     font-size: 1.25rem;
+    color: var(--text-main);
 }
 
 .table-responsive {
@@ -189,49 +191,57 @@ button:active {
 
 .admin-table th {
     text-align: left;
-    color: #94a3b8;
+    color: var(--text-dim);
     padding: 12px 16px;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
 .admin-table tbody tr {
-    background: rgba(255, 255, 255, 0.02);
-    transition: background 0.2s;
+    background: white;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .admin-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #f9fafb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .admin-table td {
     padding: 16px;
     vertical-align: middle;
+    color: var(--text-main);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .admin-table td:first-child {
     border-top-left-radius: 12px;
     border-bottom-left-radius: 12px;
+    border-left: 1px solid var(--border-color);
 }
 
 .admin-table td:last-child {
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
+    border-right: 1px solid var(--border-color);
 }
 
 .tenant-name {
     font-weight: 600;
     font-size: 1rem;
-    color: #e2e8f0;
+    color: var(--text-main);
 }
 
 .tenant-id {
     font-size: 0.75rem;
-    color: #64748b;
-    font-family: 'Courier New', monospace;
-    opacity: 0.7;
+    color: var(--text-dim);
+    font-family: monospace;
+    opacity: 0.8;
 }
 
 .status-badge {
@@ -240,7 +250,7 @@ button:active {
     font-size: 0.75rem;
     font-weight: 600;
     background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
+    color: #059669;
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
@@ -253,18 +263,20 @@ button:active {
     border-radius: 6px;
     font-size: 0.85rem;
     border: 1px solid transparent;
+    color: var(--text-dim);
 }
 
 .action-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #f3f4f6;
+    border-color: var(--border-color);
+    color: var(--text-main);
 }
 
 /* MODALS */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -273,11 +285,15 @@ button:active {
 }
 
 .modal-content {
+    background: white;
     width: 100%;
     max-width: 450px;
     padding: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
     animation: modalIn 0.3s ease-out;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+    color: var(--text-main);
 }
 
 @keyframes modalIn {
@@ -305,16 +321,16 @@ button:active {
 
 .input-group label {
     display: block;
-    color: #94a3b8;
+    color: var(--text-main);
     font-size: 0.9rem;
     margin-bottom: 8px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .admin-input {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #f9fafb;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     padding: 12px;
     border-radius: 8px;
     width: 100%;
@@ -324,8 +340,9 @@ button:active {
 
 .admin-input:focus {
     outline: none;
-    border-color: var(--admin-primary);
-    background: rgba(0, 0, 0, 0.3);
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 2px var(--primary-glow);
 }
 
 .modal-actions {
@@ -337,10 +354,10 @@ button:active {
 
 /* CREDENTIALS BOX */
 .credentials-box {
-    background: rgba(0, 0, 0, 0.3);
+    background: #f9fafb;
     border-radius: 8px;
     padding: 16px;
-    border: 1px dashed #334155;
+    border: 1px dashed var(--border-color);
     margin-top: 20px;
 }
 
@@ -356,23 +373,23 @@ button:active {
 }
 
 .credential-row .label {
-    color: #94a3b8;
+    color: var(--text-dim);
     font-size: 0.9rem;
 }
 
 .credential-row .value {
-    font-family: 'Courier New', monospace;
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.05);
+    font-family: monospace;
+    color: var(--text-main);
+    background: white;
     padding: 4px 8px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
 }
 
 .credential-row .value.highlight {
-    color: #ffeb3b;
-    border-color: rgba(253, 224, 71, 0.2);
-    background: rgba(253, 224, 71, 0.1);
+    color: #b45309;
+    border-color: #fcd34d;
+    background: #fffbeb;
     font-weight: bold;
 }
 
@@ -385,4 +402,5 @@ button:active {
     align-items: center;
     justify-content: center;
     margin: 0 auto;
+    color: #10b981;
 }

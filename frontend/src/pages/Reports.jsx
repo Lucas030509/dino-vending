@@ -196,7 +196,7 @@ export default function Reports() {
             )}
 
             {selectedImage && (
-                <div className="image-modal" onClick={() => setSelectedImage(null)} style={{ zIndex: 2000 }}>
+                <div className="image-modal" onClick={() => setSelectedImage(null)}>
                     <img src={selectedImage} alt="Evidencia" />
                 </div>
             )}

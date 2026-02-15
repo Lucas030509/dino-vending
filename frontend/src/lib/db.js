@@ -2,10 +2,10 @@ import Dexie from 'dexie';
 
 export const db = new Dexie('DinoDatabase');
 
-db.version(2).stores({ // Bump version to 2
+db.version(3).stores({ // Bump version to 3
     // Entities mirrored from Supabase
     locations: 'id, name, district, tenant_id',
-    machines: 'id, location_name, location_id, zone, tenant_id', // Added location_id
+    machines: 'id, location_name, location_id, zone, tenant_id, refill_frequency', // Added refill_frequency
     routes: 'id, scheduled_date, status, tenant_id',
     route_stops: 'id, route_id, machine_id, status',
     collections: 'id, collection_date, record_type, machine_id, tenant_id', // Stores both Refills and Cortes

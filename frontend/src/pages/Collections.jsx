@@ -611,7 +611,6 @@ export default function Collections() {
                                 value={sortOption}
                                 onChange={(e) => setSortOption(e.target.value)}
                                 className="filter-select"
-                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: 'white', flex: 1 }}
                             >
                                 <option value="zone_asc">📍 Zona (A-Z)</option>
                                 <option value="name_asc">🔤 Nombre (A-Z)</option>
@@ -667,7 +666,6 @@ export default function Collections() {
                                     className="filter-select"
                                     value={timeFilter}
                                     onChange={(e) => setTimeFilter(e.target.value)}
-                                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '5px 10px', borderRadius: 6 }}
                                 >
                                     <option value="month">Este Mes</option>
                                     <option value="bimester">Últimos 2 Meses</option>
@@ -708,23 +706,14 @@ export default function Collections() {
                                 }
 
                                 return groups.map((group, idx) => (
-                                    <div key={idx} className="month-group" style={{ marginBottom: 20 }}>
-                                        <div className="group-header" style={{
-                                            background: 'rgba(255,255,255,0.05)',
-                                            padding: '8px 12px',
-                                            borderRadius: '6px 6px 0 0',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                            marginTop: idx > 0 ? 15 : 0
-                                        }}>
-                                            <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{group.title}</span>
-                                            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                                                Total Ganancia: <span style={{ color: '#10b981' }}>${group.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div key={idx} className="month-group">
+                                        <div className="group-header">
+                                            <span className="group-header-title">{group.title}</span>
+                                            <span className="group-header-total">
+                                                Total Ganancia: <span>${group.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </span>
                                         </div>
-                                        <table className="history-table" style={{ marginTop: 0 }}>
+                                        <table className="history-table">
                                             <thead>
                                                 <tr>
                                                     <th>Fecha</th>

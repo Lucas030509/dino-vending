@@ -506,25 +506,25 @@ export default function Machines() {
                         </button>
                     </div>
 
-                    <div className="view-switcher" style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', gap: '4px' }}>
+                    <div className="view-switcher-container">
                         <button
                             onClick={() => setViewMode('all')}
                             title="Ver Todas"
-                            style={{ background: viewMode === 'all' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'all' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                            className={`view-switcher-btn ${viewMode === 'all' ? 'active' : ''}`}
                         >
                             <LayoutGrid size={18} />
                         </button>
                         <button
                             onClick={() => setViewMode('location')}
                             title="Agrupar por Punto de Venta"
-                            style={{ background: viewMode === 'location' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'location' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                            className={`view-switcher-btn ${viewMode === 'location' ? 'active' : ''}`}
                         >
                             <Store size={18} />
                         </button>
                         <button
                             onClick={() => setViewMode('zone')}
                             title="Agrupar por Zona"
-                            style={{ background: viewMode === 'zone' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'zone' ? 'black' : '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex' }}
+                            className={`view-switcher-btn ${viewMode === 'zone' ? 'active' : ''}`}
                         >
                             <Layers size={18} />
                         </button>
@@ -562,7 +562,7 @@ export default function Machines() {
                 {loading ? (
                     <div className="loading-state"><p>Cargando máquinas...</p></div>
                 ) : filteredMachines.length === 0 ? (
-                    <div className="empty-state glass">
+                    <div className="empty-state machine-card">
                         <p>{filterQuery ? 'No se encontraron máquinas con ese criterio.' : 'No tienes máquinas registradas.'}</p>
                     </div>
                 ) : (
@@ -596,19 +596,10 @@ export default function Machines() {
                                     }, {})
                                 ).map(([groupName, groupMachines]) => (
                                     <div key={groupName} className="group-section" style={{ marginBottom: '30px' }}>
-                                        <h3 style={{
-                                            fontSize: '1.2rem',
-                                            marginBottom: '15px',
-                                            paddingBottom: '8px',
-                                            borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                            color: 'var(--primary-color)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}>
+                                        <h3 className="group-header">
                                             {viewMode === 'location' ? <Store size={18} /> : <Layers size={18} />}
                                             {groupName}
-                                            <span style={{ fontSize: '0.8em', opacity: 0.6, marginLeft: 'auto' }}>({groupMachines.length})</span>
+                                            <span className="group-count">({groupMachines.length})</span>
                                         </h3>
                                         <div className="machine-grid">
                                             {groupMachines.map(machine => (

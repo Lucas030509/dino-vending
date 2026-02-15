@@ -258,7 +258,7 @@ export default function AdminDashboard({ session }) {
                 <div className="modal-overlay">
                     <div className="glass modal-content">
                         <h3>Registrar Nuevo Cliente</h3>
-                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '15px' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>
                             Nota: Esto crea el registro de la empresa. El usuario Auth debes crearlo aparte.
                         </p>
                         {errorMsg && (
@@ -317,7 +317,7 @@ export default function AdminDashboard({ session }) {
                             <ShieldOff /> Zona de Peligro
                         </h3>
                         <p>¿Estás seguro que deseas eliminar la empresa <strong>{targetTenant.name}</strong>?</p>
-                        <p style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>
                             Esta acción es <strong>IRREVERSIBLE</strong>. Se perderán el historial, usuarios y configuración de este cliente.
                         </p>
 
@@ -350,7 +350,7 @@ export default function AdminDashboard({ session }) {
                                 <ShieldCheck size={40} color="#10b981" />
                             </div>
                             <h3 style={{ color: '#10b981', margin: '10px 0' }}>¡Cliente Creado Exitosamente!</h3>
-                            <p style={{ color: '#cbd5e1' }}>Entrega estas credenciales al cliente ahora mismo.</p>
+                            <p style={{ color: 'var(--text-dim)' }}>Entrega estas credenciales al cliente ahora mismo.</p>
                         </div>
 
                         <div className="credentials-box">
@@ -364,7 +364,7 @@ export default function AdminDashboard({ session }) {
                             </div>
                         </div>
 
-                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', marginTop: '15px' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textAlign: 'center', marginTop: '15px' }}>
                             Recomendación: Pide al usuario que cambie su contraseña al ingresar.
                         </p>
 

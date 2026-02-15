@@ -21,7 +21,8 @@ const DEFAULT_MACHINE = {
     closing_time: '',
     contract_type: 'commission',
     rent_periodicity: 'Mensual',
-    rent_amount: ''
+    rent_amount: '',
+    refill_frequency: 'Quincenal'
 }
 
 export function MachineFormModal({ isOpen, onClose, onSubmit, initialData, isEditing }) {
@@ -227,6 +228,19 @@ export function MachineFormModal({ isOpen, onClose, onSubmit, initialData, isEdi
                             value={formData.machine_count}
                             onChange={e => setFormData({ ...formData, machine_count: parseInt(e.target.value) })}
                         />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Frecuencia de Relleno (Temporalidad)</label>
+                        <select
+                            value={formData.refill_frequency || 'Quincenal'}
+                            onChange={e => setFormData({ ...formData, refill_frequency: e.target.value })}
+                            className="select-input"
+                        >
+                            {['Semanal', 'Quincenal', 'Mensual', '40 dias', '2 meses'].map(p => (
+                                <option key={p} value={p}>{p}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="form-section-divider">

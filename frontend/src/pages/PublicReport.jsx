@@ -140,7 +140,7 @@ export default function PublicReport() {
                 )}
             </header>
 
-            <form onSubmit={handleSubmit} className="report-form glass">
+            <form onSubmit={handleSubmit} className="report-form">
                 <div className="form-group">
                     <label>¿Qué pasó?</label>
                     <select
@@ -164,7 +164,7 @@ export default function PublicReport() {
                         ) : (
                             <>
                                 <Camera size={32} />
-                                <span style={{ textAlign: "center" }}>Tomar foto o subir</span>
+                                <span>Tomar foto o subir</span>
                             </>
                         )}
                         <input

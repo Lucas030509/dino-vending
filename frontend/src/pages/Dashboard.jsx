@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, DollarSign, Settings, LayoutGrid, CheckCircle2, AlertCircle, Calendar, TrendingUp, Package, Map, MapPin, FileText, ShieldCheck, Store } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns'
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import './Dashboard.css'
 
@@ -21,6 +21,7 @@ export default function Dashboard({ isSuperAdmin }) {
   const [performanceData, setPerformanceData] = useState([])
   const [stockStatus, setStockStatus] = useState([])
   const [agenda, setAgenda] = useState([])
+  const [temporalAlerts, setTemporalAlerts] = useState([])
   const [pendingReports, setPendingReports] = useState(0)
   const [todayRoutesCount, setTodayRoutesCount] = useState(0)
 
@@ -184,7 +185,34 @@ export default function Dashboard({ isSuperAdmin }) {
         const stockMap = []
         const agendaMap = []
 
+        const temporalMap = []
+
+        const FREQUENCY_DAYS = {
+          'Semanal': 7,
+          'Quincenal': 15,
+          'Mensual': 30,
+          '40 dias': 40,
+          '2 meses': 60
+        }
+
         machinesData.forEach(m => {
+          // Temporal Alerts Logic
+          if (m.last_refill_date) {
+            const lastRefill = parseISO(m.last_refill_date)
+            const daysFreq = FREQUENCY_DAYS[m.refill_frequency || 'Quincenal'] || 15
+            const nextDue = addDays(lastRefill, daysFreq)
+            const daysUntilDue = differenceInDays(nextDue, now)
+
+            if (daysUntilDue <= 3) {
+              temporalMap.push({
+                id: m.id,
+                name: m.location_name,
+                daysUntil: daysUntilDue,
+                frequency: m.refill_frequency || 'Quincenal'
+              })
+            }
+          }
+
           const latest = latestCollections?.find(c => c.machine_id === m.id)
 
           if (latest) {
@@ -223,6 +251,7 @@ export default function Dashboard({ isSuperAdmin }) {
 
         setStockStatus(stockMap.sort((a, b) => a.level - b.level).slice(0, 5)) // Top 5 critical
         setAgenda(agendaMap.sort((a, b) => a.daysUntil - b.daysUntil))
+        setTemporalAlerts(temporalMap.sort((a, b) => a.daysUntil - b.daysUntil))
       }
     } catch (e) { console.error(e) } finally {
       setLoading(false)
@@ -415,12 +444,12 @@ export default function Dashboard({ isSuperAdmin }) {
         <div
           className="glass stat-card"
           onClick={() => todayRoutesCount > 0 && navigate('/routes')}
-          style={{ cursor: todayRoutesCount > 0 ? 'pointer' : 'default', borderColor: todayRoutesCount > 0 ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)' }}
+          style={{ cursor: todayRoutesCount > 0 ? 'pointer' : 'default', borderColor: todayRoutesCount > 0 ? 'var(--primary-color)' : 'var(--border-color)' }}
         >
-          <Map className="icon teal" style={{ background: todayRoutesCount > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)' }} />
+          <Map className="icon teal" style={{ background: todayRoutesCount > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0,0,0,0.05)' }} />
           <div className="stat-content">
             <span className="label">Rutas de Hoy</span>
-            <span className="value" style={{ color: todayRoutesCount > 0 ? 'var(--primary-color)' : 'white' }}>{todayRoutesCount}</span>
+            <span className="value" style={{ color: todayRoutesCount > 0 ? 'var(--primary-color)' : 'var(--text-main)' }}>{todayRoutesCount}</span>
           </div>
         </div>
         <div className="glass stat-card">
@@ -469,12 +498,13 @@ export default function Dashboard({ isSuperAdmin }) {
                     <stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} />
                 <Tooltip
-                  contentStyle={{ background: '#1c2128', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: 'var(--panel-color)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   itemStyle={{ color: 'var(--primary-color)' }}
+                  labelStyle={{ color: 'var(--text-main)' }}
                 />
                 <Area type="monotone" dataKey="ganancia" stroke="var(--primary-color)" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
               </AreaChart>
@@ -535,6 +565,32 @@ export default function Dashboard({ isSuperAdmin }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="temporal-alerts glass">
+            <div className="section-header-mini">
+              <Clock size={18} style={{ color: '#0066cc' }} />
+              <h3>Rellenos por Temporalidad</h3>
+            </div>
+            <div className="alerts-list">
+              {temporalAlerts.length === 0 ? (
+                <p className="empty-msg">No hay alertas de temporalidad.</p>
+              ) : (
+                temporalAlerts.map(alert => (
+                  <div key={alert.id} className="alert-item">
+                    <div className="alert-link-content">
+                      <div className="alert-main">
+                        <strong>{alert.name}</strong>
+                        <span className="badge-frequency">{alert.frequency}</span>
+                      </div>
+                      <span className={`alert-days ${alert.daysUntil <= 0 ? 'critical' : 'warning'}`}>
+                        {alert.daysUntil < 0 ? `Atrasado ${Math.abs(alert.daysUntil)} días` : alert.daysUntil === 0 ? 'Toca hoy' : `En ${alert.daysUntil} días`}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

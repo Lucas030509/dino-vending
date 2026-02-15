@@ -310,49 +310,36 @@ export default function Locations() {
 
                             return (
                                 <div key={loc.id}
-                                    className="machine-card glass hover-effect"
-                                    style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+                                    className="machine-card icon-btn-wrapper"
+                                    style={{ cursor: 'pointer' }}
                                     onClick={() => {
                                         setPreSelectedLocation(loc)
                                         setShowLinkModal(true)
                                     }}
                                 >
-                                    <div className="card-header">
+                                    <div className="m-header">
                                         <div className="header-top">
-                                            <h3 className="machine-name text-xl">{loc.name}</h3>
-                                            <div className="status-badge active" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                                            <h3 className="m-body h4">{loc.name}</h3>
+                                            <div className="station-badge">
                                                 <MapPin size={12} /> {loc.district || 'General'}
                                             </div>
                                         </div>
-                                        <p className="machine-uid" style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.9rem' }}>
-                                            {loc.address || 'Sin dirección registrada'}
-                                        </p>
                                     </div>
+                                    <p className="qr-ref">
+                                        {loc.address || 'Sin dirección registrada'}
+                                    </p>
 
                                     {/* Assigned Machines Section */}
-                                    <div style={{
-                                        margin: '15px 0',
-                                        padding: '10px',
-                                        background: 'rgba(0,0,0,0.2)',
-                                        borderRadius: '8px',
-                                        flex: 1
-                                    }}>
-                                        <span style={{ fontSize: '0.8em', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, display: 'block', marginBottom: '8px' }}>
+                                    <div className="assigned-machines-box">
+                                        <span className="assigned-label">
                                             Máquinas ({locMachines.length})
                                         </span>
                                         {locMachines.length === 0 ? (
-                                            <div style={{ fontSize: '0.85rem', opacity: 0.5, fontStyle: 'italic' }}>Sin máquinas asignadas</div>
+                                            <div style={{ fontSize: '0.85rem', opacity: 0.5, fontStyle: 'italic', color: 'var(--text-dim)' }}>Sin máquinas asignadas</div>
                                         ) : (
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                                 {locMachines.map(m => (
-                                                    <div key={m.id} style={{
-                                                        background: 'rgba(var(--primary-rgb), 0.1)',
-                                                        border: '1px solid rgba(var(--primary-rgb), 0.3)',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.8rem',
-                                                        color: 'var(--primary-color)'
-                                                    }}>
+                                                    <div key={m.id} className="machine-pill">
                                                         {m.qr_code_uid || m.nickname || 'Máquina'}
                                                     </div>
                                                 ))}
@@ -360,15 +347,8 @@ export default function Locations() {
                                         )}
                                     </div>
 
-                                    <div className="card-actions" style={{
-                                        marginTop: 'auto',
-                                        paddingTop: 15,
-                                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                                        display: 'grid',
-                                        gridTemplateColumns: 'auto auto 1fr',
-                                        gap: '8px'
-                                    }}>
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingLocation(loc); setShowModal(true) }} className="icon-btn tool-btn" title="Editar">
+                                    <div className="card-actions">
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingLocation(loc); setShowModal(true) }} className="icon-btn" title="Editar">
                                             <Edit size={16} />
                                         </button>
                                         <button onClick={(e) => { e.stopPropagation(); setLocationToDelete(loc); setDeleteError(null); }} className="icon-btn delete-btn" title="Eliminar">

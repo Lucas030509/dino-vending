@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { db } from '../../lib/db'
-import { X, Camera, Package, AlertCircle, Check, ArrowRight } from 'lucide-react'
+import { X, Camera, Package, AlertCircle, Check, ArrowRight, CheckCircle2 } from 'lucide-react'
 import '../../pages/Refills.css'
 
-export default function RefillFormModal({ onClose, onSuccess, location }) {
+export default function RefillFormModal({ onClose, onSuccess, location, showToast }) {
     const [submitting, setSubmitting] = useState(false)
     const [photo, setPhoto] = useState(null)
     const [photoPreview, setPhotoPreview] = useState('')
@@ -145,96 +145,135 @@ export default function RefillFormModal({ onClose, onSuccess, location }) {
 
     return (
         <div className="modal-overlay">
-            <div className="glass modal-content" style={{ maxWidth: '600px' }}>
-                <div className="refills-header">
+            <div className="glass modal-content" style={{ maxWidth: '600px', padding: '0' }}>
+                <div className="modal-header-refined" style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h3 style={{ margin: 0 }}>Relleno: {location?.name}</h3>
-                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>{location?.address}</p>
+                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem' }}>Registro de Rellenos</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-dim)' }}>{location?.name} • {location?.address}</p>
                     </div>
-                    <button onClick={onClose} className="btn-secondary icon-only"><X size={20} /></button>
+                    <button onClick={onClose} className="btn-secondary" style={{ padding: '8px', minWidth: 'auto', border: 'none', background: 'transparent' }}>
+                        <X size={20} />
+                    </button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="machines-refill-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
+                <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+                    <div className="machines-refill-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {Object.values(refillMap).map(item => (
-                            <div key={item.id} className="machine-refill-item glass" style={{ padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{item.name}</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Cap: {item.capacity} | Actual: {item.current}</span>
+                            <div key={item.id} className="machine-refill-card" style={{
+                                padding: '16px',
+                                background: 'var(--bg-color)',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                    <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{item.name}</span>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                                        Cap: {item.capacity} | Stock: {item.current}
+                                    </span>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'end' }}>
-                                    {/* Manual Input */}
-                                    <div className="field-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.75rem' }}>Cantidad a Agregar</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
+                                    <div className="input-group-clean">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Cargar</label>
                                         <input
                                             type="number"
-                                            className="refill-input compact"
+                                            className="refill-input"
                                             value={item.add_amount}
                                             onChange={e => handleUpdate(item.id, 'add_amount', e.target.value)}
                                             placeholder="0"
-                                            style={{ padding: '8px' }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'var(--bg-color)',
+                                                color: 'var(--text-main)',
+                                                fontSize: '1rem'
+                                            }}
                                         />
                                     </div>
 
-                                    {/* Toggle Full */}
                                     <button
                                         type="button"
-                                        className={`btn-secondary ${item.is_full ? 'active-success' : ''}`}
+                                        className={`btn-selector ${item.is_full ? 'active' : ''}`}
                                         style={{
-                                            justifyContent: 'center',
                                             height: '42px',
-                                            borderColor: item.is_full ? '#10b981' : 'rgba(255,255,255,0.1)',
-                                            color: item.is_full ? '#10b981' : '#94a3b8'
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            border: item.is_full ? '2px solid var(--success-color)' : '1px solid var(--border-color)',
+                                            background: item.is_full ? 'rgba(0, 204, 102, 0.05)' : 'var(--bg-color)',
+                                            color: item.is_full ? 'var(--success-color)' : 'var(--text-dim)',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: 700,
+                                            fontSize: '0.9rem',
+                                            transition: '0.2s'
                                         }}
                                         onClick={() => handleUpdate(item.id, 'is_full', !item.is_full)}
                                     >
-                                        {item.is_full ? <Check size={16} style={{ marginRight: 4 }} /> : null}
-                                        {item.is_full ? 'Lleno Completo' : 'Marcar Lleno'}
+                                        {item.is_full ? <CheckCircle2 size={18} /> : <div style={{ width: 18, height: 18, border: '2px solid #ddd', borderRadius: '50%' }} />}
+                                        {item.is_full ? 'Está Lleno' : 'Marcar Full'}
                                     </button>
                                 </div>
 
-                                {/* Visual Indicator of Result */}
-                                <div style={{ marginTop: '8px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div
-                                        style={{
-                                            height: '100%',
-                                            width: `${Math.min(100, ((item.current + (parseInt(item.add_amount) || 0)) / item.capacity) * 100)}%`,
-                                            background: '#10b981',
-                                            transition: 'width 0.3s ease'
-                                        }}
-                                    />
+                                {/* Visual Progress of simulated stock */}
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                                        <span>Proyección post-relleno</span>
+                                        <span style={{ fontWeight: 700 }}>{Math.min(100, (((item.current + (parseInt(item.add_amount) || 0)) / item.capacity) * 100)).toFixed(0)}%</span>
+                                    </div>
+                                    <div style={{ height: '6px', background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div
+                                            style={{
+                                                height: '100%',
+                                                width: `${Math.min(100, ((item.current + (parseInt(item.add_amount) || 0)) / item.capacity) * 100)}%`,
+                                                background: 'var(--success-color)',
+                                                transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="field-group" style={{ marginTop: '20px' }}>
-                        <label>Evidencia Visual (Opcional)</label>
-                        <div className="photo-preview-box compact" onClick={() => document.getElementById('refill-photo').click()} style={{ height: '80px', minHeight: '80px' }}>
+                    <div className="evidence-section" style={{ marginTop: '24px' }}>
+                        <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em', marginBottom: '12px' }}>Evidencia (Opcional)</h4>
+                        <div
+                            className="photo-uploader"
+                            onClick={() => document.getElementById('refill-photo').click()}
+                            style={{
+                                border: '2px dashed var(--border-color)',
+                                borderRadius: '12px',
+                                height: photoPreview ? '180px' : '100px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                background: '#f9fafb',
+                                overflow: 'hidden',
+                                transition: '0.2s'
+                            }}
+                        >
                             {photoPreview ? (
-                                <img src={photoPreview} alt="Preview" className="preview-img" />
+                                <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#94a3b8' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-dim)' }}>
                                     <Camera size={24} />
-                                    <span>Tocar para tomar foto</span>
+                                    <span style={{ fontWeight: 600 }}>Cargar foto del punto</span>
                                 </div>
                             )}
-                            <input
-                                id="refill-photo"
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                hidden
-                                onChange={handlePhotoChange}
-                            />
+                            <input id="refill-photo" type="file" accept="image/*" capture="environment" hidden onChange={handlePhotoChange} />
                         </div>
                     </div>
 
-                    <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-                        <button type="submit" className="btn-primary" disabled={submitting}>
-                            {submitting ? 'Guardando...' : 'Confirmar Rellenos'}
+                    <div className="modal-actions" style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
+                        <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', fontWeight: 600 }}>Cerrar</button>
+                        <button type="submit" className="btn-primary" disabled={submitting} style={{ flex: 2, padding: '12px', borderRadius: '8px', border: 'none', background: 'var(--primary-color)', color: 'white', cursor: 'pointer', fontWeight: 700, boxShadow: '0 4px 12px var(--primary-glow)' }}>
+                            {submitting ? 'Procesando...' : 'Guardar Rellenos'}
                         </button>
                     </div>
                 </form>

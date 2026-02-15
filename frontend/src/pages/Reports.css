@@ -1,8 +1,9 @@
+/* Reports Module Styles - V3 Light Theme */
 .reports-page {
-    padding: 20px;
-    max-width: 800px;
+    padding: 24px 32px 80px 32px;
+    max-width: 900px;
     margin: 0 auto;
-    color: white;
+    color: var(--text-main);
     padding-bottom: 80px;
 }
 
@@ -26,33 +27,37 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     transition: all 0.2s;
+    cursor: pointer;
 }
 
 .back-btn:hover {
     background: var(--primary-color);
-    color: black;
+    color: white;
+    border-color: var(--primary-color);
 }
 
 .page-header h1 {
     margin: 0;
     font-size: 1.8rem;
+    font-weight: 700;
 }
 
-/* .page-header h1 appeared twice in original css? I kept one */
 .subtitle {
     color: var(--text-dim);
     margin: 4px 0 0 0;
     font-size: 0.9rem;
 }
 
+/* Tabs */
 .tabs-container {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
 }
 
@@ -71,29 +76,34 @@
 }
 
 .tab-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
 }
 
 .tab-btn.active {
     background: var(--primary-color);
-    color: black;
+    color: white;
     font-weight: 600;
+    box-shadow: 0 2px 8px var(--primary-glow);
 }
 
+/* Empty State */
 .empty-glass {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--panel-color);
     padding: 40px;
     border-radius: 12px;
     text-align: center;
-    color: #888;
+    color: var(--text-dim);
+    border: 1px solid var(--border-color);
 }
 
 .empty-icon {
     opacity: 0.5;
     margin-bottom: 10px;
+    color: var(--text-dim);
 }
 
+/* Report Card */
 .report-card {
     position: relative;
     margin-bottom: 16px;
@@ -102,44 +112,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(22, 27, 34, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--panel-color);
+    border: 1px solid var(--border-color);
     transition: 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-@media (max-width: 600px) {
-    .report-card {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .r-actions {
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .report-status-stripe {
-        height: 100%;
-        width: 6px;
-        order: -1;
-    }
-
-    .report-card {
-        border-left: 6px solid transparent;
-    }
-
-    /* Fallback layout fix */
-    .report-status-stripe {
-        display: none;
-    }
-
-    /* Hide stripe on mobile col layout, use border-left instead */
+.report-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .report-card.resolved {
-    opacity: 0.6;
-    filter: grayscale(0.5);
+    opacity: 0.7;
+    background: #f9fafb;
+    /* Lighter background for resolved */
+    border-color: var(--border-color);
 }
 
 .report-status-stripe {
@@ -166,10 +155,11 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    color: var(--text-main);
 }
 
 .r-date {
-    color: #666;
+    color: var(--text-dim);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -178,30 +168,34 @@
 .report-content h3 {
     margin: 0 0 2px 0;
     font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
 }
 
 .r-uid {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-dim);
     font-family: monospace;
     margin: 0 0 8px 0;
 }
 
 .r-desc {
     font-style: italic;
-    color: #ccc;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 8px;
+    color: var(--text-main);
+    background: var(--bg-color);
+    padding: 10px;
     border-radius: 6px;
     display: inline-block;
     margin-top: 4px;
+    border: 1px solid var(--border-color);
+    width: 100%;
 }
 
 .view-photo-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    color: white;
-    margin-top: 8px;
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+    margin-top: 10px;
     padding: 6px 12px;
     border-radius: 12px;
     font-size: 0.8rem;
@@ -209,19 +203,23 @@
     display: flex;
     gap: 6px;
     align-items: center;
+    transition: 0.2s;
 }
 
 .view-photo-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--bg-color);
+    border-color: var(--primary-color);
 }
 
 .r-actions {
     padding: 16px;
+    display: flex;
+    align-items: center;
 }
 
 .resolve-btn {
-    background: var(--primary-color);
-    color: black;
+    background: var(--success-color, #10b981);
+    color: white;
     border: none;
     padding: 8px 16px;
     border-radius: 8px;
@@ -230,17 +228,26 @@
     display: flex;
     gap: 6px;
     align-items: center;
+    transition: 0.2s;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.resolve-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
 }
 
 .resolved-badge {
-    color: #10b981;
+    color: var(--success-color, #10b981);
     font-weight: 600;
-    border: 1px solid #10b981;
+    border: 1px solid var(--success-color, #10b981);
     padding: 4px 12px;
     border-radius: 12px;
     font-size: 0.8rem;
+    background: rgba(16, 185, 129, 0.05);
 }
 
+/* Modal */
 .image-modal {
     position: fixed;
     top: 0;
@@ -248,15 +255,50 @@
     right: 0;
     bottom: 0;
     z-index: 2000;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.85);
+    /* Dark background for image viewing is standard */
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
+    backdrop-filter: blur(5px);
 }
 
 .image-modal img {
     max-width: 90%;
     max-height: 90vh;
     border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 600px) {
+    .reports-page {
+        padding: 20px;
+    }
+
+    .report-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .r-actions {
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        background: #f9fafb;
+    }
+
+    .report-status-stripe {
+        height: 6px;
+        /* Horizontal stripe on mobile? Or hidden */
+        width: 100%;
+        order: -1;
+        display: none;
+        /* Hide stripe on mobile and use border-left maybe? */
+    }
+
+    .report-card {
+        border-left: 6px solid transparent;
+        /* Use colored border left as stripe equivalent */
+    }
 }
