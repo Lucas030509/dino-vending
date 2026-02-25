@@ -386,6 +386,13 @@
     flex-direction: column;
 }
 
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
+}
+
 .modal-header {
     padding: 20px;
     border-bottom: 1px solid var(--border-color);
@@ -421,7 +428,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 30px;
     padding: 25px;
-    overflow-y: auto;
 }
 
 @media (max-width: 768px) {
