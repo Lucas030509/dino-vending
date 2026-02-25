@@ -193,10 +193,7 @@ export default function Collections() {
                 notes: '',
                 units_sold: 0,
                 cost_capsule: 1, // Default, maybe fetch from settings later
-                units_sold: 0,
-                cost_capsule: 1, // Default
                 cost_product: globalProductCost,
-                commission_percent: isRent ? 0 : (m.commission_percent || 0),
                 commission_percent: isRent ? 0 : (m.commission_percent || 0),
                 is_rent: isRent
             }
