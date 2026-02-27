@@ -19,16 +19,17 @@ export default function Collections() {
     const locationsData = useLiveQuery(() => db.locations.toArray())
     const machinesData = useLiveQuery(() => db.machines.toArray())
 
-    // Time Filter State
+    // Filter State
     const [timeFilter, setTimeFilter] = useState('all') // 'month', 'bimester', 'trimester', 'semester', 'year', 'all'
+    const [locationFilter, setLocationFilter] = useState('all') // 'all' or location id
 
     const collectionsData = useLiveQuery(async () => {
         let query = db.collections.orderBy('collection_date').reverse()
 
-        if (timeFilter !== 'all') {
-            const now = new Date()
-            let startDate
+        const now = new Date()
+        let startDate = null
 
+        if (timeFilter !== 'all') {
             switch (timeFilter) {
                 case 'month': startDate = startOfMonth(now); break;
                 case 'bimester': startDate = subMonths(now, 2); break;
@@ -37,14 +38,16 @@ export default function Collections() {
                 case 'year': startDate = startOfYear(now); break;
                 default: startDate = null
             }
-
-            if (startDate) {
-                const isoStart = startDate.toISOString()
-                return query.filter(c => c.collection_date >= isoStart).toArray()
-            }
         }
-        return query.limit(150).toArray()
-    }, [timeFilter])
+
+        const isoStart = startDate ? startDate.toISOString() : null
+
+        return query.filter(c => {
+            if (isoStart && c.collection_date < isoStart) return false
+            if (locationFilter !== 'all' && c.location_id !== locationFilter) return false
+            return true
+        }).limit(150).toArray()
+    }, [timeFilter, locationFilter])
 
     const locations = locationsData || []
     const machines = machinesData || []
@@ -659,18 +662,30 @@ export default function Collections() {
                         <div className="panel-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                                 <h3>Historial Reciente</h3>
-                                <select
-                                    className="filter-select"
-                                    value={timeFilter}
-                                    onChange={(e) => setTimeFilter(e.target.value)}
-                                >
-                                    <option value="month">Este Mes</option>
-                                    <option value="bimester">Últimos 2 Meses</option>
-                                    <option value="trimester">Últimos 3 Meses</option>
-                                    <option value="semester">Últimos 6 Meses</option>
-                                    <option value="year">Este Año</option>
-                                    <option value="all">Todo el Historial</option>
-                                </select>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <select
+                                        className="filter-select"
+                                        value={locationFilter}
+                                        onChange={(e) => setLocationFilter(e.target.value)}
+                                    >
+                                        <option value="all">Todas las ubicaciones</option>
+                                        {locations.map(loc => (
+                                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        className="filter-select"
+                                        value={timeFilter}
+                                        onChange={(e) => setTimeFilter(e.target.value)}
+                                    >
+                                        <option value="month">Este Mes</option>
+                                        <option value="bimester">Últimos 2 Meses</option>
+                                        <option value="trimester">Últimos 3 Meses</option>
+                                        <option value="semester">Últimos 6 Meses</option>
+                                        <option value="year">Este Año</option>
+                                        <option value="all">Todo el Historial</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div className="table-responsive">
