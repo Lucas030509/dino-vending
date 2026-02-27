@@ -590,13 +590,18 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden;
-    height: 300px;
-    margin: 20px 0;
+    height: 302px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: max-content;
+    max-width: 100%;
 }
 
 .sig-canvas-large {
-    width: 100%;
-    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
 }
 
 .incident-panel {
