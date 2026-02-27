@@ -827,7 +827,11 @@ export default function Collections() {
                                 <SignatureCanvas
                                     ref={signatureRef}
                                     penColor="black"
-                                    canvasProps={{ className: 'sig-canvas-large' }}
+                                    canvasProps={{
+                                        width: Math.min(window.innerWidth - 60, 500),
+                                        height: 300,
+                                        className: 'sig-canvas-large'
+                                    }}
                                     backgroundColor="white"
                                 />
                             </div>
