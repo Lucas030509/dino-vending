@@ -135,7 +135,7 @@ const CollectionModal = ({
                                         {isRent && <span className="badge-god-mini">Renta Fija</span>}
                                     </div>
 
-                                    <div className="form-grid compact-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1.2fr' }}>
+                                    <div className="form-grid compact-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
                                         <div className="input-group">
                                             <label>Monto ($)</label>
                                             <input
@@ -155,37 +155,12 @@ const CollectionModal = ({
                                                 disabled={isRent}
                                                 onChange={e => onUpdateCollection(m.id, 'commission_percent', e.target.value)}
                                             />
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'right', marginTop: '4px' }}>
-                                                -${commission.toFixed(2)}
-                                            </div>
                                         </div>
 
                                         <div className="input-group">
-                                            <label>Relleno (U)</label>
-                                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                                <input
-                                                    type="number" step="1" placeholder="0"
-                                                    value={data.add_stock}
-                                                    onChange={e => onUpdateCollection(m.id, 'add_stock', e.target.value)}
-                                                    style={{ width: '100%' }}
-                                                />
-                                            </div>
-                                            <div style={{ marginTop: 5 }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onUpdateCollection(m.id, 'is_full', !data.is_full)}
-                                                    className={data.is_full ? 'control-btn active-success' : 'control-btn'}
-                                                    style={{ width: '100%', background: data.is_full ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.1)', color: data.is_full ? '#10b981' : '#94a3b8', border: data.is_full ? '1px solid #10b981' : 'none' }}
-                                                >
-                                                    {data.is_full ? '¡FULL!' : 'Marcar Lleno'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="input-group">
-                                            <label>Ganancia</label>
-                                            <div className="fake-input" style={{ color: '#10b981', fontWeight: 'bold' }}>
-                                                ${(parseFloat(data.gross_amount || 0) - commission).toFixed(2)}
+                                            <label>A Pagar al Locatario</label>
+                                            <div className="fake-input" style={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                                                ${commission.toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
@@ -197,30 +172,15 @@ const CollectionModal = ({
                     {/* NEW SUMMARY SECTION */}
                     <div className="summary-panel glass" style={{ marginTop: '20px', padding: '15px', border: '1px solid rgba(var(--primary-rgb), 0.3)', background: 'rgba(0,0,0,0.3)' }}>
                         <h4 style={{ margin: '0 0 10px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>Resumen del Corte</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px', fontSize: '1rem' }}>
                             <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Relleno Total:</span>
-                                <strong>{summary.totalRefill} u</strong>
-                            </div>
-                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Importe Total:</span>
+                                <span>Importe Recaudado Total:</span>
                                 <strong>${summary.totalAmount.toFixed(2)}</strong>
                             </div>
                             <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24' }}>
-                                <span>Comisión Total:</span>
-                                <strong>-${summary.totalCommission.toFixed(2)}</strong>
+                                <span>Total A Pagar al Locatario (Comisiones):</span>
+                                <strong>${summary.totalCommission.toFixed(2)}</strong>
                             </div>
-                            <div className="summary-row" style={{ display: 'flex', justifyContent: 'space-between', color: '#f87171' }}>
-                                <span>Costo Total:</span>
-                                <strong>-${summary.totalCost.toFixed(2)}</strong>
-                            </div>
-                        </div>
-                        <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                            <span>Ganancia Final:</span>
-                            <span style={{ color: '#10b981' }}>${summary.totalProfit.toFixed(2)}</span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '5px', textAlign: 'right' }}>
-                            * Calculado como: Importe - (Relleno * Costo)
                         </div>
                     </div>
 
