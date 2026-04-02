@@ -452,10 +452,16 @@ export default function Collections() {
             ))
 
             // D. Local Dexie Updates
-            await db.machines.bulkUpdate(machineStockUpdates.map(u => ({
-                key: u.id,
-                changes: { current_stock_snapshot: u.current_stock_snapshot, last_refill_date: u.last_refill_date }
-            })))
+            await Promise.all(machineStockUpdates.map(u => 
+                db.machines.update(u.id, { 
+                    current_stock_snapshot: u.current_stock_snapshot, 
+                    last_refill_date: u.last_refill_date 
+                })
+            ))
+
+            if (insertedCollections.length > 0) {
+                await db.collections.bulkPut(insertedCollections)
+            }
 
 
             // E. Send Emails (After success)
