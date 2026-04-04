@@ -27,10 +27,23 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false) // New Global State
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (!session) setLoading(false)
-    })
+    const authTimeout = setTimeout(() => {
+        if (loading) {
+            console.warn('Auth session check timed out. Proceeding to auth screen.');
+            setLoading(false);
+        }
+    }, 5000);
+
+    supabase.auth.getSession()
+        .then(({ data: { session } }) => {
+            setSession(session)
+            if (!session) setLoading(false)
+        })
+        .catch(err => {
+            console.error('Auth session fetch failed:', err)
+            setLoading(false)
+        })
+        .finally(() => clearTimeout(authTimeout));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session)
